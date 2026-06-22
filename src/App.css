@@ -1,0 +1,276 @@
+.navibar {
+  background-color: #1e293b;
+  display: flex;
+  justify-content: center;
+  align-content: center;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+nav {
+  width: 100%;
+}
+
+nav h2 {
+  color: white;
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+nav ul {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  list-style: none;
+  padding: 0;
+}
+
+nav ul li a {
+  text-decoration: none;
+  color: white;
+  font-weight: 500;
+  transition: 0.3s;
+}
+
+nav ul li a:hover {
+  color: #38bdf8;
+}
+.dashboard-card {
+  max-width: 600px;
+  margin: 50px auto;
+  padding: 40px;
+
+  background: white;
+  border-radius: 15px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+
+  text-align: center;
+}
+.dashboard-card h1,
+.dashboard-card h2,
+.dashboard-card p {
+  color: #111827;
+}
+
+.dashboard-buttons {
+  margin-top: 20px;
+
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+}
+.dashboard-buttons button {
+  padding: 12px 20px;
+  border: none;
+  border-radius: 8px;
+  background-color: #2563eb;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.dashboard-buttons button:hover {
+  background-color: #1d4ed8;
+}
+.student-list-container {
+  max-width: 1200px;
+  margin: 50px auto;
+  padding: 20px;
+}
+
+.student-list-container h1 {
+  text-align: center;
+  margin-bottom: 30px;
+}
+.student-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 25px;
+}
+.student-card {
+  background: white;
+  padding: 25px;
+  border-radius: 15px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+
+  transition: 0.3s;
+}
+.student-card:hover {
+  transform: translateY(-5px);
+}
+.student-card h3 {
+  margin-top: 0;
+  color: #111827;
+}
+
+.student-card p {
+  color: #4b5563;
+  margin: 10px 0;
+}
+.student-card button {
+  margin-top: 15px;
+  width: 100%;
+
+  padding: 10px;
+
+  border: none;
+  border-radius: 8px;
+
+  background-color: #2563eb;
+  color: white;
+
+  cursor: pointer;
+  transition: 0.3s;
+}
+.student-card button:hover {
+  background-color: #1d4ed8;
+}
+.student-details-card {
+  max-width: 600px;
+  margin: 50px auto;
+  padding: 30px;
+  background: white;
+  border-radius: 15px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  text-align: center;
+}
+.student-details-card h1 {
+  margin-bottom: 25px;
+  color: #111827;
+}
+.student-details-card h2 {
+  color: #2563eb;
+  margin-bottom: 20px;
+}
+.student-details-card p {
+  font-size: 18px;
+  margin: 12px 0;
+  color: #374151;
+}
+.student-details-card:hover {
+  transform: translateY(-3px);
+  transition: 0.3s;
+}
+.student-details-page {
+  text-align: center;
+  margin-top: 40px;
+}
+
+.student-details-page h1 {
+  color: white;
+  margin-bottom: 25px;
+}
+
+.form-page {
+  text-align: center;
+  margin-top: 40px;
+}
+
+.form-page h1 {
+  color: white;
+  margin-bottom: 25px;
+}
+.form-card {
+  max-width: 500px;
+  margin: 0 auto;
+
+  background: white;
+
+  padding: 30px;
+
+  border-radius: 15px;
+
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+.form-card label {
+  display: block;
+
+  text-align: left;
+
+  font-weight: bold;
+
+  margin-bottom: 8px;
+
+  color: #111827;
+}
+.form-card input {
+  width: 100%;
+
+  padding: 12px;
+
+  margin-bottom: 20px;
+
+  border: 1px solid #d1d5db;
+
+  border-radius: 8px;
+
+  box-sizing: border-box;
+}
+.form-card button {
+  width: 100%;
+
+  padding: 12px;
+
+  border: none;
+
+  border-radius: 8px;
+
+  background-color: #2563eb;
+
+  color: white;
+
+  font-weight: bold;
+
+  cursor: pointer;
+
+  transition: 0.3s;
+}
+.form-card button:hover {
+  background-color: #1d4ed8;
+}
+.primary-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  background-color: #2563eb;
+  color: white;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.primary-btn:hover {
+  background-color: #1d4ed8;
+}
+.delete-btn {
+  width: 100%;
+  margin-top: 10px;
+
+  padding: 10px;
+
+  border: none;
+  border-radius: 8px;
+
+  background-color: #dc2626;
+  color: white;
+
+  cursor: pointer;
+}
+
+.delete-btn:hover {
+  background-color: #b91c1c;
+}
+.student-filter {
+  padding: 10px;
+  margin-bottom: 20px;
+
+  border-radius: 8px;
+  border: none;
+
+  font-size: 16px;
+}
+.filter-controls {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin-bottom: 25px;
+}

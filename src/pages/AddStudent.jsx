@@ -1,3 +1,4 @@
+import { addStudent } from "../services/studentService";
 import { StudentContext } from "../context/StudentContext";
 import "../App.css";
 import { useState, useContext } from "react";
@@ -5,14 +6,14 @@ import { useNavigate } from "react-router-dom";
 
 function AddStudent() {
   const navigate = useNavigate();
-  const { students, setStudents } = useContext(StudentContext);
+  const { fetchStudents } = useContext(StudentContext);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [course, setCourse] = useState("");
   const [age, setAge] = useState("");
   const [cgpa, setCgpa] = useState("");
 
-  function handleSubmit() {
+  async function handleSubmit() {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     if (!name.trim() || !email.trim() || !course.trim() || !age || !cgpa) {
@@ -38,16 +39,24 @@ function AddStudent() {
       cgpa: Number(cgpa),
     };
 
-    setStudents([...students, newStudent]);
+    try {
+      await addStudent(newStudent);
 
-    alert("Student Added Successfully");
+      await fetchStudents();
 
-    setName("");
-    setEmail("");
-    setCourse("");
-    setAge("");
-    setCgpa("");
-    navigate("/students");
+      alert("Student Added Successfully");
+
+      setName("");
+      setEmail("");
+      setCourse("");
+      setAge("");
+      setCgpa("");
+
+      navigate("/students");
+    } catch (error) {
+      console.log(error);
+      alert("Failed to add student");
+    }
   }
 
   return (

@@ -1,6 +1,9 @@
+const cors = require("cors");
+
 const express = require("express");
 
 const app = express();
+app.use(cors());
 
 app.use(express.json());
 
@@ -8,19 +11,25 @@ const students = [
   {
     id: 1,
     name: "John Doe",
+    email: "johndoe@example.com",
     course: "Computer Science",
+    age: 21,
     cgpa: 8.2,
   },
   {
     id: 2,
     name: "Jane Smith",
+    email: "janesmith@example.com",
     course: "Mechanical Engineering",
+    age: 19,
     cgpa: 9.4,
   },
   {
     id: 3,
     name: "Mike Johnson",
+    email: "mikejohnson@example.com",
     course: "Electronics",
+    age: 20,
     cgpa: 7.5,
   },
 ];
@@ -121,6 +130,6 @@ app.delete("/students/:id", (req, res) => {
   });
 });
 
-app.listen(5173, () => {
-  console.log("Server running on port 5173");
+app.listen(5000, () => {
+  console.log("Server running on port 5000");
 });

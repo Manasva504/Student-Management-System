@@ -2,10 +2,11 @@ import "../App.css";
 import { useContext } from "react";
 import { StudentContext } from "../context/StudentContext";
 import { Link } from "react-router-dom";
+import { deleteStudent as deleteStudentAPI } from "../services/studentService";
 
 function StudentCard({ student }) {
-  const { students, setStudents } = useContext(StudentContext);
-  function deleteStudent() {
+  const { fetchStudents } = useContext(StudentContext);
+  async function deleteStudent() {
     const confirmDelete = window.confirm(
       `Are you sure you want to delete ${student.name}?`,
     );
@@ -14,11 +15,16 @@ function StudentCard({ student }) {
       return;
     }
 
-    const updatedStudents = students.filter((s) => s.id !== student.id);
+    try {
+      await deleteStudentAPI(student.id);
 
-    setStudents(updatedStudents);
+      await fetchStudents();
 
-    alert("Student Deleted Successfully");
+      alert("Student Deleted Successfully");
+    } catch (error) {
+      console.log(error);
+      alert("Failed to delete student");
+    }
   }
   return (
     <div className="student-card">
@@ -27,6 +33,8 @@ function StudentCard({ student }) {
       <p>Email: {student.email}</p>
 
       <p>Course: {student.course}</p>
+
+      <p>Age: {student.age}</p>
 
       <p>Cgpa: {student.cgpa}</p>
 

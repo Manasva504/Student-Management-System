@@ -1,12 +1,13 @@
 import { useContext, useState } from "react";
 import { StudentContext } from "../context/StudentContext";
 import { useParams, useNavigate } from "react-router-dom";
+import { updateStudent } from "../services/studentService";
 
 function EditStudent() {
   const navigate = useNavigate();
   const { id } = useParams();
 
-  const { students, setStudents } = useContext(StudentContext);
+  const { students, fetchStudents } = useContext(StudentContext);
 
   const student = students.find((s) => s.id === Number(id));
 
@@ -20,28 +21,32 @@ function EditStudent() {
     return <h2>Student Not Found</h2>;
   }
 
-  function handleUpdate() {
+  async function handleUpdate() {
     if (cgpa < 0 || cgpa > 10) {
       alert("CGPA must be between 0 and 10");
       return;
     }
-    const updatedStudents = students.map((s) =>
-      s.id === Number(id)
-        ? {
-            ...s,
-            name,
-            email,
-            course,
-            age: Number(age),
-            cgpa: Number(cgpa),
-          }
-        : s,
-    );
 
-    setStudents(updatedStudents);
+    const updatedStudent = {
+      name,
+      email,
+      course,
+      age: Number(age),
+      cgpa: Number(cgpa),
+    };
 
-    alert("Student Updated Successfully");
-    navigate("/students");
+    try {
+      await updateStudent(id, updatedStudent);
+
+      await fetchStudents();
+
+      alert("Student Updated Successfully");
+
+      navigate("/students");
+    } catch (error) {
+      console.log(error);
+      alert("Failed to update student");
+    }
   }
   return (
     <div className="form-page">
