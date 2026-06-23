@@ -13,7 +13,7 @@ function AddStudent() {
   const [age, setAge] = useState("");
   const [cgpa, setCgpa] = useState("");
 
-  async function handleSubmit() {
+  async function  handleSubmit() {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     if (!name.trim() || !email.trim() || !course.trim() || !age || !cgpa) {

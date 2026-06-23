@@ -1,3 +1,6 @@
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import { Navigate } from "react-router-dom";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import "./App.css";
 import EditStudent from "./pages/EditStudent";
@@ -6,25 +9,84 @@ import AddStudent from "./pages/AddStudent";
 import StudentList from "./pages/StudentList";
 import StudentDetails from "./pages/StudentDetails";
 import Navbar from "./components/Navbar";
+import { useLocation } from "react-router-dom";
+
+function ProtectedRoute({ children }) {
+  const token = localStorage.getItem("token");
+
+  return token ? children : <Navigate to="/login" />;
+}
+
+function AppContent() {
+  const location = useLocation();
+
+  const hideNavbar =
+    location.pathname === "/login" || location.pathname === "/register";
+
+  return (
+    <>
+      {!hideNavbar && <Navbar />}
+
+      <Routes>
+        {/* Public Routes */}
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+
+        {/* Protected Routes */}
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/add-student"
+          element={
+            <ProtectedRoute>
+              <AddStudent />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/students"
+          element={
+            <ProtectedRoute>
+              <StudentList />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/students/:id"
+          element={
+            <ProtectedRoute>
+              <StudentDetails />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/edit-student/:id"
+          element={
+            <ProtectedRoute>
+              <EditStudent />
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
+    </>
+  );
+}
 
 function App() {
   return (
     <>
       <BrowserRouter>
-        <div>
-          <Navbar />
-
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-
-            <Route path="/add-student" element={<AddStudent />} />
-
-            <Route path="/students" element={<StudentList />} />
-
-            <Route path="/students/:id" element={<StudentDetails />} />
-            <Route path="/edit-student/:id" element={<EditStudent />} />
-          </Routes>
-        </div>
+        <AppContent />
       </BrowserRouter>
     </>
   );

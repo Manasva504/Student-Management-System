@@ -1,11 +1,22 @@
+const authRoutes = require("./routes/authRoutes");
+const authMiddleware = require("./middleware/authMiddleware");
+require("dotenv").config();
+
+const connectDB = require("./config/db");
+
 const cors = require("cors");
 
 const express = require("express");
 
 const app = express();
+
+connectDB();
+
 app.use(cors());
 
 app.use(express.json());
+
+app.use("/api/auth", authRoutes);
 
 const students = [
   {
@@ -38,11 +49,11 @@ app.get("/", (req, res) => {
   res.send("Backend Running");
 });
 
-app.get("/students", (req, res) => {
+app.get("/students", authMiddleware, (req, res) => {
   res.json(students);
 });
 
-app.get("/students/:id", (req, res) => {
+app.get("/students/:id",authMiddleware, (req, res) => {
   const id = Number(req.params.id);
 
   const student = students.find((student) => student.id === id);
@@ -56,7 +67,7 @@ app.get("/students/:id", (req, res) => {
   res.json(student);
 });
 
-app.post("/students", (req, res) => {
+app.post("/students", authMiddleware,(req, res) => {
   const { id, name, course, cgpa } = req.body;
 
   if (!id || !name || !course || cgpa === undefined) {
@@ -81,7 +92,7 @@ app.post("/students", (req, res) => {
 });
 
 
-app.put("/students/:id", (req, res) => {
+app.put("/students/:id", authMiddleware, (req, res) => {
   const id = Number(req.params.id);
 
   const updatedData = req.body;
@@ -107,7 +118,7 @@ app.put("/students/:id", (req, res) => {
   });
 });
 
-app.delete("/students/:id", (req, res) => {
+app.delete("/students/:id", authMiddleware, (req, res) => {
   const id = Number(req.params.id);
 
   const studentIndex = students.findIndex(
