@@ -98,8 +98,9 @@ nav ul li a:hover {
 }
 .student-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 25px;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 2rem;
+  margin-top: 2rem;
 }
 .student-card {
   background: white;
@@ -138,6 +139,14 @@ nav ul li a:hover {
 }
 .student-card button:hover {
   background-color: #1d4ed8;
+}
+
+.profile-image {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-bottom: 15px;
 }
 .student-details-card {
   max-width: 600px;

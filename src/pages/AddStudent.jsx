@@ -1,4 +1,4 @@
-import { addStudent } from "../services/studentService";
+import { addStudent, uploadProfilePic } from "../services/studentService";
 import { StudentContext } from "../context/StudentContext";
 import "../App.css";
 import { useState, useContext } from "react";
@@ -12,8 +12,9 @@ function AddStudent() {
   const [course, setCourse] = useState("");
   const [age, setAge] = useState("");
   const [cgpa, setCgpa] = useState("");
+  const [profilePic, setProfilePic] = useState(null);
 
-  async function  handleSubmit() {
+  async function handleSubmit() {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     if (!name.trim() || !email.trim() || !course.trim() || !age || !cgpa) {
@@ -30,6 +31,18 @@ function AddStudent() {
       return;
     }
 
+    let imageUrl = "";
+
+    if (profilePic) {
+      const formData = new FormData();
+
+      formData.append("profilePic", profilePic);
+
+      const uploadResponse = await uploadProfilePic(formData);
+
+      imageUrl = uploadResponse.data.imageUrl;
+    }
+
     const newStudent = {
       id: Date.now(),
       name,
@@ -37,6 +50,7 @@ function AddStudent() {
       course,
       age: Number(age),
       cgpa: Number(cgpa),
+      profilePic: imageUrl,
     };
 
     try {
@@ -115,6 +129,13 @@ function AddStudent() {
               }
             }
           }}
+        />
+
+        <label>Profile Picture</label>
+        <input
+          type="file"
+          accept="image/*"
+          onChange={(e) => setProfilePic(e.target.files[0])}
         />
 
         <button type="submit" className="primary-btn">

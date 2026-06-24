@@ -18,6 +18,29 @@ app.use(express.json());
 
 app.use("/api/auth", authRoutes);
 
+const multer = require("multer");
+const path = require("path");
+
+const storage = multer.diskStorage({
+  destination: "./uploads",
+
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + path.extname(file.originalname));
+  },
+});
+
+const upload = multer({
+  storage,
+});
+
+app.use("/uploads", express.static("uploads"));
+
+app.post("/upload", authMiddleware, upload.single("profilePic"), (req, res) => {
+  res.json({
+    imageUrl: `/uploads/${req.file.filename}`,
+  });
+});
+
 const students = [
   {
     id: 1,
@@ -53,7 +76,7 @@ app.get("/students", authMiddleware, (req, res) => {
   res.json(students);
 });
 
-app.get("/students/:id",authMiddleware, (req, res) => {
+app.get("/students/:id", authMiddleware, (req, res) => {
   const id = Number(req.params.id);
 
   const student = students.find((student) => student.id === id);
@@ -67,8 +90,8 @@ app.get("/students/:id",authMiddleware, (req, res) => {
   res.json(student);
 });
 
-app.post("/students", authMiddleware,(req, res) => {
-  const { id, name, course, cgpa } = req.body;
+app.post("/students", authMiddleware, (req, res) => {
+  const { id, name, email, course, age, cgpa, profilePic } = req.body;
 
   if (!id || !name || !course || cgpa === undefined) {
     return res.status(400).json({
@@ -79,8 +102,11 @@ app.post("/students", authMiddleware,(req, res) => {
   const newStudent = {
     id,
     name,
+    email,
     course,
+    age,
     cgpa,
+    profilePic,
   };
 
   students.push(newStudent);
@@ -91,15 +117,12 @@ app.post("/students", authMiddleware,(req, res) => {
   });
 });
 
-
 app.put("/students/:id", authMiddleware, (req, res) => {
   const id = Number(req.params.id);
 
   const updatedData = req.body;
 
-  const studentIndex = students.findIndex(
-    (student) => student.id === id
-  );
+  const studentIndex = students.findIndex((student) => student.id === id);
 
   if (studentIndex === -1) {
     return res.status(404).json({
@@ -121,9 +144,7 @@ app.put("/students/:id", authMiddleware, (req, res) => {
 app.delete("/students/:id", authMiddleware, (req, res) => {
   const id = Number(req.params.id);
 
-  const studentIndex = students.findIndex(
-    (student) => student.id === id
-  );
+  const studentIndex = students.findIndex((student) => student.id === id);
 
   if (studentIndex === -1) {
     return res.status(404).json({
@@ -143,4 +164,30 @@ app.delete("/students/:id", authMiddleware, (req, res) => {
 
 app.listen(5000, () => {
   console.log("Server running on port 5000");
+});
+
+app.get("/dashboard/stats", authMiddleware, (req, res) => {
+  const totalStudents = students.length;
+
+  const studentsPerBranch = {};
+
+  students.forEach((student) => {
+    const branch = student.course;
+
+    studentsPerBranch[branch] = (studentsPerBranch[branch] || 0) + 1;
+  });
+
+  const averageCGPA =
+    students.reduce((sum, student) => sum + student.cgpa, 0) / totalStudents;
+
+  const highestCGPAStudent = students.reduce((highest, student) =>
+    student.cgpa > highest.cgpa ? student : highest,
+  );
+
+  res.json({
+    totalStudents,
+    studentsPerBranch,
+    averageCGPA: averageCGPA.toFixed(2),
+    highestCGPAStudent,
+  });
 });

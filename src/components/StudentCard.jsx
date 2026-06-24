@@ -28,6 +28,13 @@ function StudentCard({ student }) {
   }
   return (
     <div className="student-card">
+      {student.profilePic && (
+        <img
+          src={`http://localhost:5000${student.profilePic}`}
+          alt={student.name}
+          className="profile-image"
+        />
+      )}
       <h3>{student.name}</h3>
 
       <p>Email: {student.email}</p>

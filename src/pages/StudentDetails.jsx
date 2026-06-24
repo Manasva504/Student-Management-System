@@ -19,6 +19,14 @@ function StudentDetails() {
       <div className="student-details-card">
         <h2>{student.name}</h2>
 
+        {student.profilePic && (
+          <img
+            src={`http://localhost:5000${student.profilePic}`}
+            alt={student.name}
+            className="profile-image"
+          />
+        )}
+
         <p>
           <strong>Email: </strong>
           {student.email}

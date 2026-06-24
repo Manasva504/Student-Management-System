@@ -3,21 +3,67 @@ import axios from "axios";
 const API_URL = "http://localhost:5000/students";
 
 export const getStudents = () => {
-  return axios.get(API_URL);
+  const token = localStorage.getItem("token");
+
+  return axios.get(API_URL, {
+    headers: {
+      Authorization: token,
+    },
+  });
 };
 
 export const getStudentById = (id) => {
-  return axios.get(`${API_URL}/${id}`);
+  const token = localStorage.getItem("token");
+  return axios.get(`${API_URL}/${id}`, {
+    headers: {
+      Authorization: token,
+    },
+  });
 };
 
 export const addStudent = (student) => {
-  return axios.post(API_URL, student);
+  const token = localStorage.getItem("token");
+  return axios.post(API_URL, student, {
+    headers: {
+      Authorization: token,
+    },
+  });
 };
 
 export const updateStudent = (id, student) => {
-  return axios.put(`${API_URL}/${id}`, student);
+  const token = localStorage.getItem("token");
+  return axios.put(`${API_URL}/${id}`, student, {
+    headers: {
+      Authorization: token,
+    },
+  });
 };
 
 export const deleteStudent = (id) => {
-  return axios.delete(`${API_URL}/${id}`);
+  const token = localStorage.getItem("token");
+  return axios.delete(`${API_URL}/${id}`, {
+    headers: {
+      Authorization: token,
+    },
+  });
+};
+
+export const getDashboardStats = () => {
+  const token = localStorage.getItem("token");
+
+  return axios.get("http://localhost:5000/dashboard/stats", {
+    headers: {
+      Authorization: token,
+    },
+  });
+};
+export const uploadProfilePic = (formData) => {
+  const token = localStorage.getItem("token");
+
+  return axios.post("http://localhost:5000/upload", formData, {
+    headers: {
+      Authorization: token,
+      "Content-Type": "multipart/form-data",
+    },
+  });
 };

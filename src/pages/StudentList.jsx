@@ -1,10 +1,10 @@
-import { useContext, useState } from "react";
-import { StudentContext } from "../context/StudentContext";
+import { useState, useEffect } from "react";
 import StudentCard from "../components/StudentCard";
+import { getStudents } from "../services/studentService";
 import "../App.css";
 
 function StudentList() {
-  const { students } = useContext(StudentContext);
+  const [students, setStudents] = useState([]);
   const [branchFilter, setBranchFilter] = useState("All");
   const [sortOrder, setSortOrder] = useState("default");
   const filteredStudents =
@@ -12,6 +12,19 @@ function StudentList() {
       ? students
       : students.filter((student) => student.course === branchFilter);
   const sortedStudents = [...filteredStudents];
+
+  useEffect(()=>{
+    fetchStudents();
+  }, []);
+
+  const fetchStudents = async () => {
+    try {
+      const response = await getStudents();
+      setStudents(response.data);
+    } catch (error) {
+      console.log(error);
+    }
+  };
   if (sortOrder === "asc") {
     sortedStudents.sort((a, b) => a.name.localeCompare(b.name));
   }
