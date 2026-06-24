@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_URL = "http://localhost:5000/students";
+const API_URL = "https://student-management-system-zk2b.onrender.com/students";
 
 export const getStudents = () => {
   const token = localStorage.getItem("token");
@@ -51,19 +51,26 @@ export const deleteStudent = (id) => {
 export const getDashboardStats = () => {
   const token = localStorage.getItem("token");
 
-  return axios.get("http://localhost:5000/dashboard/stats", {
-    headers: {
-      Authorization: token,
+  return axios.get(
+    "https://student-management-system-zk2b.onrender.com/dashboard/stats",
+    {
+      headers: {
+        Authorization: token,
+      },
     },
-  });
+  );
 };
 export const uploadProfilePic = (formData) => {
   const token = localStorage.getItem("token");
 
-  return axios.post("http://localhost:5000/upload", formData, {
-    headers: {
-      Authorization: token,
-      "Content-Type": "multipart/form-data",
+  return axios.post(
+    "https://student-management-system-zk2b.onrender.com/upload",
+    formData,
+    {
+      headers: {
+        Authorization: token,
+        "Content-Type": "multipart/form-data",
+      },
     },
-  });
+  );
 };
