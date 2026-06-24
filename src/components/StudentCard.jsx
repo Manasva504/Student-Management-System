@@ -30,7 +30,7 @@ function StudentCard({ student }) {
     <div className="student-card">
       {student.profilePic && (
         <img
-          src={`http://localhost:5000${student.profilePic}`}
+          src={`https://student-management-system-zk2b.onrender.com${student.profilePic}`}
           alt={student.name}
           className="profile-image"
         />
