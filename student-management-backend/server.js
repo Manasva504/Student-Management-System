@@ -24,8 +24,6 @@ app.use((req, res, next) => {
 });
 
 app.use("/api/auth", authRoutes);
-
-const multer = require("multer");
 const path = require("path");
 
 const storage = multer.diskStorage({
