@@ -1,23 +1,27 @@
-const authRoutes = require("./routes/authRoutes");
-const authMiddleware = require("./middleware/authMiddleware");
-require("dotenv").config();
+const dotenv = require("dotenv");
+
+dotenv.config();
 
 const connectDB = require("./config/db");
+const authRoutes = require("./routes/authRoutes");
+const authMiddleware = require("./middleware/authMiddleware");
 
-const cors = require("cors");
-
-const express = require("express");
+const multer = require("multer");
+const path = require("path");
 
 const app = express();
 
 connectDB();
 
+// Middlewares
 app.use(cors());
+app.use(express.json());
+
+// Request Logger
 app.use((req, res, next) => {
-  console.log(req.method, req.url);
+  console.log(`${req.method} ${req.url}`);
   next();
 });
-app.use(express.json());
 
 app.use("/api/auth", authRoutes);
 
