@@ -1,5 +1,6 @@
 const dotenv = require("dotenv");
-
+const express = require("express");
+const cors = require("cors");
 dotenv.config();
 
 const connectDB = require("./config/db");
@@ -24,10 +25,6 @@ app.use((req, res, next) => {
 });
 
 app.use("/api/auth", authRoutes);
-<<<<<<< HEAD
-const path = require("path");
-=======
->>>>>>> 8d9dac8a50c62c9597611bc57da9ccac2eb39640
 
 const storage = multer.diskStorage({
   destination: "./uploads",
