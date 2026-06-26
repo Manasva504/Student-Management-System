@@ -1,8 +1,9 @@
 import { addStudent, uploadProfilePic } from "../services/studentService";
 import { StudentContext } from "../context/StudentContext";
 import "../App.css";
-import { useState, useContext } from "react";
+import { useState, useContext, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 
 function AddStudent() {
   const navigate = useNavigate();
@@ -14,20 +15,40 @@ function AddStudent() {
   const [cgpa, setCgpa] = useState("");
   const [profilePic, setProfilePic] = useState(null);
 
+  const [branches, setBranches] = useState([]);
+
+  useEffect(() => {
+    const savedBranches = JSON.parse(localStorage.getItem("branches")) || [];
+
+    setBranches(savedBranches);
+  }, []);
+
   async function handleSubmit() {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+    const nameRegex = /^[A-Za-z\s]+$/;
+
+    if (!nameRegex.test(name)) {
+      toast.error("Name can only contain letters");
+      return;
+    }
+
     if (!name.trim() || !email.trim() || !course.trim() || !age || !cgpa) {
-      alert("Please fill all fields");
+      toast.error("Please fill all fields");
+      return;
+    }
+
+    if (age <= 0) {
+      toast.error("Age must be greater than 0");
       return;
     }
 
     if (!emailRegex.test(email)) {
-      alert("Please enter a valid email address");
+      toast.error("Please enter a valid email address");
       return;
     }
     if (cgpa < 0 || cgpa > 10) {
-      alert("CGPA must be between 0 and 10");
+      toast.error("CGPA must be between 0 and 10");
       return;
     }
 
@@ -58,7 +79,7 @@ function AddStudent() {
 
       await fetchStudents();
 
-      alert("Student Added Successfully");
+      toast.success("Student Added Successfully");
 
       setName("");
       setEmail("");
@@ -69,7 +90,7 @@ function AddStudent() {
       navigate("/students");
     } catch (error) {
       console.log(error);
-      alert("Failed to add student");
+      toast.error("Failed to add student");
     }
   }
 
@@ -101,19 +122,23 @@ function AddStudent() {
         />
 
         <label>Course</label>
-        <input
-          type="text"
-          placeholder="Enter course"
-          value={course}
-          onChange={(e) => setCourse(e.target.value)}
-        />
+        <select value={course} onChange={(e) => setCourse(e.target.value)}>
+          <option value="">Select Branch</option>
+
+          {branches.map((branch) => (
+            <option key={branch} value={branch}>
+              {branch}
+            </option>
+          ))}
+        </select>
 
         <label>Age</label>
         <input
           type="number"
-          placeholder="Enter age"
+          placeholder="Enter your age"
           value={age}
           onChange={(e) => setAge(e.target.value)}
+          min="1"
         />
         <label>Cgpa</label>
         <input

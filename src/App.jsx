@@ -10,6 +10,7 @@ import StudentList from "./pages/StudentList";
 import StudentDetails from "./pages/StudentDetails";
 import Navbar from "./components/Navbar";
 import { useLocation } from "react-router-dom";
+import ManageBranches from "../pages/ManageBranches";
 
 function ProtectedRoute({ children }) {
   const token = localStorage.getItem("token");
@@ -77,6 +78,8 @@ function AppContent() {
             </ProtectedRoute>
           }
         />
+
+        <Route path="/manage-branches" element={<ManageBranches />} />
       </Routes>
     </>
   );

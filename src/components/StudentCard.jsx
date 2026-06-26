@@ -3,6 +3,7 @@ import { useContext } from "react";
 import { StudentContext } from "../context/StudentContext";
 import { Link } from "react-router-dom";
 import { deleteStudent as deleteStudentAPI } from "../services/studentService";
+import toast from "react-hot-toast";
 
 function StudentCard({ student }) {
   const { fetchStudents } = useContext(StudentContext);
@@ -20,10 +21,10 @@ function StudentCard({ student }) {
 
       await fetchStudents();
 
-      alert("Student Deleted Successfully");
+      toast.success("Student Deleted Successfully");
     } catch (error) {
       console.log(error);
-      alert("Failed to delete student");
+      toast.success("Failed to delete student");
     }
   }
   return (

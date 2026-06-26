@@ -104,6 +104,12 @@ app.post("/students", authMiddleware, (req, res) => {
     });
   }
 
+  if (age <= 0) {
+    return res.status(400).json({
+      message: "Age must be greater than 0",
+    });
+  }
+
   const newStudent = {
     id,
     name,
@@ -132,6 +138,12 @@ app.put("/students/:id", authMiddleware, (req, res) => {
   if (studentIndex === -1) {
     return res.status(404).json({
       message: "Student not found",
+    });
+  }
+
+  if (age <= 0) {
+    return res.status(400).json({
+      message: "Age must be greater than 0",
     });
   }
 

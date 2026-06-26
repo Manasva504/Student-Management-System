@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import "../App.css";
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 
 function Navbar() {
   const navigate = useNavigate();
@@ -8,7 +9,7 @@ function Navbar() {
   function handleLogout() {
     localStorage.removeItem("token");
 
-    alert("Logged out successfully");
+    toast.success("Logged out successfully");
 
     navigate("/login");
   }
@@ -33,6 +34,9 @@ function Navbar() {
             <button onClick={handleLogout} className="logout-btn">
               Logout
             </button>
+          </li>
+          <li>
+            <Link to="/manage-branches">Manage Branches</Link>
           </li>
         </ul>
       </nav>
