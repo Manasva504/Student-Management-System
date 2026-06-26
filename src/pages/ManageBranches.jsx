@@ -5,36 +5,33 @@ function ManageBranches() {
   const [branch, setBranch] = useState("");
   const [branches, setBranches] = useState([]);
 
-  // Load branches when page loads
   useEffect(() => {
     const savedBranches = JSON.parse(localStorage.getItem("branches")) || [
       "Computer Science",
       "Information Technology",
       "Electronics",
     ];
-
     setBranches(savedBranches);
   }, []);
 
-  // Save branches whenever they change
   useEffect(() => {
     localStorage.setItem("branches", JSON.stringify(branches));
   }, [branches]);
 
   const addBranch = () => {
     if (!branch.trim()) return;
-
-    if (branches.includes(branch)) {
+    if (branches.includes(branch.trim())) {
       toast.error("Branch already exists");
       return;
     }
-
-    setBranches([...branches, branch]);
+    setBranches([...branches, branch.trim()]);
     setBranch("");
+    toast.success("Branch added");
   };
 
   const deleteBranch = (branchToDelete) => {
     setBranches(branches.filter((b) => b !== branchToDelete));
+    toast.success("Branch removed");
   };
 
   return (
@@ -45,23 +42,19 @@ function ManageBranches() {
         <div className="branch-input-section">
           <input
             type="text"
-            placeholder="Enter branch"
-            value={newBranch}
-            onChange={(e) => setNewBranch(e.target.value)}
+            placeholder="Enter branch name"
+            value={branch}
+            onChange={(e) => setBranch(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && addBranch()}
           />
-
-          <button onClick={handleAddBranch}>Add Branch</button>
+          <button onClick={addBranch}>Add Branch</button>
         </div>
 
         <ul className="branch-list">
-          {branches.map((branch, index) => (
+          {branches.map((b, index) => (
             <li key={index} className="branch-item">
-              <span>{branch}</span>
-
-              <button
-                className="delete-btn"
-                onClick={() => handleDeleteBranch(branch)}
-              >
+              <span>{b}</span>
+              <button className="delete-btn" onClick={() => deleteBranch(b)}>
                 Delete
               </button>
             </li>
@@ -71,4 +64,5 @@ function ManageBranches() {
     </div>
   );
 }
+
 export default ManageBranches;

@@ -1,461 +1,744 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap");
+
 :root {
-  --primary: #4f46e5;
-  --primary-hover: #4338ca;
+  /* --- New Color Palette --- */
+  --primary: #6366f1;
+  --primary-hover: #4f46e5;
+  --primary-light: rgba(99, 102, 241, 0.12);
+  --primary-gradient: linear-gradient(135deg, #6366f1, #8b5cf6);
 
   --secondary: #06b6d4;
+  --accent: #a78bfa;
 
-  --danger: #ef4444;
-  --danger-hover: #dc2626;
+  --danger: #f43f5e;
+  --danger-hover: #e11d48;
 
-  --background: #0f172a;
-  --card-bg: rgba(255, 255, 255, 0.95);
+  /* Background: deep navy-to-slate gradient */
+  --background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+
+  /* Cards: soft frosted white */
+  --card-bg: rgba(255, 255, 255, 0.97);
+  --card-border: rgba(99, 102, 241, 0.15);
 
   --text-dark: #1e293b;
+  --text-muted: #64748b;
   --text-light: #f8fafc;
 
-  --border: #cbd5e1;
+  --border: #e2e8f0;
+  --border-focus: #6366f1;
 
-  --shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow: 0 8px 32px rgba(99, 102, 241, 0.15), 0 2px 8px rgba(0, 0, 0, 0.08);
+  --shadow-hover: 0 20px 48px rgba(99, 102, 241, 0.25), 0 4px 16px rgba(0, 0, 0, 0.1);
+
+  --radius: 14px;
+  --radius-sm: 8px;
+  --radius-lg: 20px;
+
+  --transition: 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ========================
+   BASE
+======================== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
 }
 
 body {
   margin: 0;
   min-height: 100vh;
-
-  background: linear-gradient(135deg, #eef2ff 0%, #dbeafe 50%, #e0e7ff 100%);
-
-  font-family: "Poppins", sans-serif;
+  background: var(--background);
+  font-family: "Inter", "Poppins", sans-serif;
+  color: var(--text-dark);
+  -webkit-font-smoothing: antialiased;
 }
 
+/* ========================
+   NAVBAR
+======================== */
 .navibar {
-  background: rgba(255, 255, 255, 0.15);
-  backdrop-filter: blur(15px);
-
-  backdrop-filter: blur(10px);
-
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(99, 102, 241, 0.2);
   display: flex;
   justify-content: center;
-  align-content: center;
-
-  padding: 20px;
-
-  box-shadow: var(--shadow);
+  padding: 16px 24px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
 
-.logout-btn {
-  background: var(--primary);
-  color: white;
-  border: none;
-  padding: 10px 18px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 1rem;
-}
-
-.logout-btn:hover {
-  opacity: 0.9;
-}
 nav {
   width: 100%;
+  max-width: 1100px;
 }
 
 nav h2 {
-  color: white;
+  color: var(--text-light);
   text-align: center;
-  margin-bottom: 15px;
+  margin: 0 0 12px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  background: var(--primary-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 nav ul {
   display: flex;
   justify-content: center;
-  gap: 30px;
+  align-items: center;
+  gap: 8px;
   list-style: none;
   padding: 0;
+  margin: 0;
+  flex-wrap: wrap;
 }
 
 nav ul li a {
   text-decoration: none;
-  color: #ffffff;
+  color: rgba(248, 250, 252, 0.75);
   font-weight: 500;
-  transition: 0.3s;
+  font-size: 0.9rem;
+  padding: 6px 14px;
+  border-radius: 999px;
+  transition: all var(--transition);
+  border: 1px solid transparent;
 }
 
 nav ul li a:hover {
-  color: #c7d2fe;
+  color: #fff;
+  background: rgba(99, 102, 241, 0.2);
+  border-color: rgba(99, 102, 241, 0.35);
 }
+
+.logout-btn {
+  background: var(--primary-gradient);
+  color: white;
+  border: none;
+  padding: 7px 18px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  transition: all var(--transition);
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.4);
+}
+
+.logout-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.5);
+  opacity: 0.92;
+}
+
+/* ========================
+   BUTTONS
+======================== */
+.primary-btn {
+  padding: 10px 22px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--primary-gradient);
+  color: white;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all var(--transition);
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+  letter-spacing: 0.2px;
+}
+
+.primary-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.45);
+}
+
+.delete-btn {
+  width: 100%;
+  margin-top: 10px;
+  padding: 10px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(135deg, #f43f5e, #e11d48);
+  color: white;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all var(--transition);
+  box-shadow: 0 2px 8px rgba(244, 63, 94, 0.25);
+}
+
+.delete-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(244, 63, 94, 0.4);
+}
+
+/* ========================
+   DASHBOARD
+======================== */
 .dashboard-card {
-  max-width: 600px;
-  margin: 50px auto;
-  padding: 40px;
-
+  max-width: 680px;
+  margin: 60px auto;
+  padding: 48px 44px;
   background: var(--card-bg);
-  backdrop-filter: blur(10px);
-  border-radius: 15px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  border: 1px solid var(--card-border);
   text-align: center;
+  position: relative;
+  overflow: hidden;
 }
-.dashboard-card h1,
-.dashboard-card h2,
+
+/* Decorative top accent */
+.dashboard-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--primary-gradient);
+}
+
+.dashboard-card h1 {
+  font-size: 1.9rem;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin: 0 0 32px;
+  letter-spacing: -0.5px;
+}
+
+/* Stat chips for dashboard */
+.dashboard-card h2 {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--primary-light);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  color: var(--primary-hover);
+  font-size: 1rem;
+  font-weight: 600;
+  padding: 10px 20px;
+  border-radius: 999px;
+  margin: 6px 4px;
+}
+
+.dashboard-card h3 {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin: 24px 0 12px;
+}
+
 .dashboard-card p {
-  color: #111827;
+  color: var(--text-dark);
+  font-size: 0.95rem;
+  margin: 6px 0;
+  padding: 8px 16px;
+  background: #f8fafc;
+  border-radius: 8px;
+  display: inline-block;
+  min-width: 220px;
 }
 
 .dashboard-buttons {
-  margin-top: 20px;
-
+  margin-top: 32px;
   display: flex;
   justify-content: center;
-  gap: 15px;
+  gap: 12px;
+  flex-wrap: wrap;
 }
+
 .dashboard-buttons button {
-  padding: 12px 20px;
+  padding: 12px 28px;
   border: none;
-  border-radius: 8px;
-  background: var(--primary);
+  border-radius: var(--radius-sm);
+  background: var(--primary-gradient);
   color: white;
   font-weight: 600;
+  font-size: 0.95rem;
   cursor: pointer;
-  transition: 0.3s;
+  transition: all var(--transition);
+  box-shadow: 0 3px 10px rgba(99, 102, 241, 0.35);
 }
 
 .dashboard-buttons button:hover {
-  background: var(--primary-hover);
   transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.45);
 }
+
+/* ========================
+   STUDENT LIST
+======================== */
 .student-list-container {
   max-width: 1200px;
   margin: 50px auto;
-  padding: 20px;
+  padding: 24px;
 }
 
 .student-list-container h1 {
   text-align: center;
-  margin-bottom: 30px;
+  color: var(--text-light);
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 32px;
+  letter-spacing: -0.5px;
 }
+
 .student-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 2rem;
-  margin-top: 2rem;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 24px;
+  margin-top: 24px;
 }
+
+/* ========================
+   STUDENT CARD
+======================== */
 .student-card {
   background: var(--card-bg);
-  backdrop-filter: blur(10px);
-  padding: 25px;
-  border-radius: 15px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-
-  transition: 0.3s;
+  border-radius: var(--radius);
+  padding: 28px 24px 20px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border);
+  transition: all var(--transition);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
+
+/* Colored left accent bar */
+.student-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: var(--primary-gradient);
+  border-radius: 4px 0 0 4px;
+}
+
 .student-card:hover {
-  transform: translateY(-8px);
-
-  box-shadow: 0 12px 30px rgba(79, 70, 229, 0.25);
+  transform: translateY(-6px);
+  box-shadow: var(--shadow-hover);
+  border-color: rgba(99, 102, 241, 0.25);
 }
+
 .student-card h3 {
-  margin-top: 0;
-  color: #111827;
+  margin: 0 0 16px;
+  color: var(--text-dark);
+  font-size: 1.1rem;
+  font-weight: 700;
 }
 
 .student-card p {
-  color: #4b5563;
-  margin: 10px 0;
+  color: var(--text-muted);
+  margin: 6px 0;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
-.student-card button {
-  margin-top: 15px;
+
+.student-card p::before {
+  content: "·";
+  color: var(--primary);
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+/* Card button group */
+.student-card > button,
+.student-card > a > button {
+  margin-top: 10px;
   width: 100%;
-
-  padding: 10px;
-
+  padding: 9px;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: all var(--transition);
+}
 
+.student-card > a:first-of-type button {
+  background: var(--primary-light);
+  color: var(--primary-hover);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+}
+
+.student-card > a:first-of-type button:hover {
   background: var(--primary);
   color: white;
-
-  cursor: pointer;
-  transition: 0.3s;
-}
-.student-card button:hover {
-  background: var(--primary-hover);
-  transform: translateY(-2px);
+  border-color: var(--primary);
 }
 
+.student-card > a:last-of-type button {
+  background: #f0fdf4;
+  color: #16a34a;
+  border: 1px solid #bbf7d0;
+}
+
+.student-card > a:last-of-type button:hover {
+  background: #16a34a;
+  color: white;
+}
+
+/* ========================
+   PROFILE IMAGE
+======================== */
 .profile-image {
-  width: 120px;
-  height: 120px;
+  width: 90px;
+  height: 90px;
   border-radius: 50%;
   object-fit: cover;
-  margin-bottom: 15px;
+  display: block;
+  margin: 0 auto 16px;
+  border: 3px solid transparent;
+  background: var(--primary-gradient) padding-box,
+    var(--primary-gradient) border-box;
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.3);
 }
-.student-details-card {
-  max-width: 600px;
-  margin: 50px auto;
-  padding: 30px;
-  background: var(--card-bg);
-  backdrop-filter: blur(10px);
-  border-radius: 15px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  text-align: center;
-}
-.student-details-card h1 {
-  margin-bottom: 25px;
-  color: #111827;
-}
-.student-details-card h2 {
-  color: #2563eb;
-  margin-bottom: 20px;
-}
-.student-details-card p {
-  font-size: 18px;
-  margin: 12px 0;
-  color: #374151;
-}
-.student-details-card:hover {
-  transform: translateY(-3px);
-  transition: 0.3s;
-}
+
+/* ========================
+   STUDENT DETAILS
+======================== */
 .student-details-page {
   text-align: center;
-  margin-top: 40px;
+  margin-top: 48px;
+  padding: 0 16px;
 }
 
 .student-details-page h1 {
-  color: white;
-  margin-bottom: 25px;
+  color: var(--text-light);
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin-bottom: 28px;
+  letter-spacing: -0.3px;
 }
 
+.student-details-card {
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 36px;
+  background: var(--card-bg);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  border: 1px solid var(--card-border);
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.student-details-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--primary-gradient);
+}
+
+.student-details-card h2 {
+  color: var(--text-dark);
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin: 0 0 20px;
+}
+
+.student-details-card p {
+  font-size: 0.95rem;
+  margin: 10px 0;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: #f8fafc;
+  border-radius: 8px;
+}
+
+.student-details-card p strong {
+  color: var(--text-dark);
+  font-weight: 600;
+  min-width: 60px;
+  text-align: left;
+}
+
+.student-details-card:hover {
+  transform: translateY(-3px);
+  transition: all var(--transition);
+}
+
+/* ========================
+   FORMS (Login, Register, Add, Edit)
+======================== */
 .form-page {
   text-align: center;
-  margin-top: 40px;
+  margin-top: 52px;
+  padding: 0 16px 48px;
 }
 
 .form-page h1 {
-  color: white;
-  margin-bottom: 25px;
+  color: var(--text-light);
+  font-size: 1.9rem;
+  font-weight: 700;
+  margin-bottom: 28px;
+  letter-spacing: -0.4px;
 }
+
 .form-card {
-  max-width: 500px;
+  max-width: 480px;
   margin: 0 auto;
-
   background: var(--card-bg);
-  backdrop-filter: blur(10px);
-
-  padding: 30px;
-
-  border-radius: 15px;
-
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-radius: var(--radius-lg);
+  padding: 36px;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--card-border);
+  text-align: left;
+  position: relative;
+  overflow: hidden;
 }
+
+.form-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--primary-gradient);
+}
+
 .form-card label {
   display: block;
-
-  text-align: left;
-
-  font-weight: bold;
-
-  margin-bottom: 8px;
-
-  color: #111827;
+  font-weight: 600;
+  font-size: 0.88rem;
+  color: var(--text-dark);
+  margin-bottom: 6px;
+  margin-top: 2px;
+  letter-spacing: 0.1px;
 }
+
 .form-card input,
 .form-card select {
   width: 100%;
-
-  padding: 12px;
-
-  margin-bottom: 20px;
-
-  border: 1px solid var(--border);
-
-  border-radius: 10px;
-
+  padding: 11px 14px;
+  margin-bottom: 18px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
   box-sizing: border-box;
+  font-size: 0.93rem;
+  color: var(--text-dark);
+  background: #fff;
+  transition: all var(--transition);
+  font-family: inherit;
+}
 
-  font-size: 15px;
-
-  transition: 0.3s;
+.form-card input::placeholder {
+  color: #94a3b8;
 }
 
 .form-card input:focus,
 .form-card select:focus {
   outline: none;
-
-  border-color: var(--primary);
-
-  box-shadow: 0 0 8px rgba(79, 70, 229, 0.3);
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+  background: #fafafe;
 }
+
 .form-card button {
   width: 100%;
-
-  padding: 12px;
-
+  padding: 13px;
   border: none;
-
-  border-radius: 8px;
-
-  background: var(--primary);
-
+  border-radius: var(--radius-sm);
+  background: var(--primary-gradient);
   color: white;
-
-  font-weight: bold;
-
+  font-weight: 700;
+  font-size: 0.95rem;
   cursor: pointer;
-
-  transition: 0.3s;
+  transition: all var(--transition);
+  box-shadow: 0 3px 12px rgba(99, 102, 241, 0.35);
+  letter-spacing: 0.2px;
+  margin-top: 4px;
 }
+
 .form-card button:hover {
-  background: var(--primary-hover);
   transform: translateY(-2px);
-}
-.primary-btn {
-  padding: 10px 20px;
-  border: none;
-  border-radius: 8px;
-  background: var(--primary);
-  color: white;
-  cursor: pointer;
-  transition: 0.3s;
+  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.45);
 }
 
-.primary-btn:hover {
-  background: var(--primary-hover);
-  transform: translateY(-2px);
-}
-.delete-btn {
-  width: 100%;
-  margin-top: 10px;
-
-  padding: 10px;
-
-  border: none;
-  border-radius: 8px;
-
-  background: var(--danger);
-  color: white;
-
-  cursor: pointer;
+.form-card p {
+  text-align: center;
+  margin-top: 18px;
+  font-size: 0.9rem;
+  color: var(--text-muted);
 }
 
-.delete-btn:hover {
-  background: var(--danger-hover);
-  transform: translateY(-2px);
+.form-card p a {
+  color: var(--primary);
+  font-weight: 600;
+  text-decoration: none;
 }
-.student-filter {
-  padding: 10px;
-  margin-bottom: 20px;
 
-  border-radius: 8px;
-  border: none;
-
-  font-size: 16px;
+.form-card p a:hover {
+  text-decoration: underline;
 }
+
+/* ========================
+   FILTER CONTROLS
+======================== */
 .filter-controls {
   display: flex;
   justify-content: center;
-  gap: 15px;
-  margin-bottom: 25px;
+  gap: 12px;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
 }
 
-.profile-image {
-  width: 120px;
-  height: 120px;
-  object-fit: cover;
-  border-radius: 50%;
-  display: block;
-  margin: 15px auto;
-  border: 3px solid #4f46e5;
+.student-filter {
+  padding: 9px 16px;
+  border-radius: 999px;
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
+  font-size: 0.9rem;
+  font-weight: 500;
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text-light);
+  cursor: pointer;
+  transition: all var(--transition);
+  backdrop-filter: blur(8px);
+  outline: none;
+  font-family: inherit;
 }
 
-/* MANAGE BRANCHES PAGE */
+.student-filter:focus {
+  border-color: var(--primary);
+  background: rgba(99, 102, 241, 0.15);
+}
 
+/* ========================
+   MANAGE BRANCHES
+======================== */
 .manage-branches-page {
   display: flex;
   justify-content: center;
   align-items: flex-start;
-
   min-height: 80vh;
-  padding-top: 50px;
+  padding: 52px 16px;
 }
 
 .manage-branches-card {
-  width: 600px;
-
-  background: rgba(255, 255, 255, 0.95);
-
-  backdrop-filter: blur(10px);
-
-  padding: 35px;
-
-  border-radius: 20px;
-
+  width: 100%;
+  max-width: 580px;
+  background: var(--card-bg);
+  border-radius: var(--radius-lg);
+  padding: 40px;
   box-shadow: var(--shadow);
+  border: 1px solid var(--card-border);
+  position: relative;
+  overflow: hidden;
+}
+
+.manage-branches-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--primary-gradient);
 }
 
 .manage-branches-card h1 {
   text-align: center;
   color: var(--text-dark);
-  margin-bottom: 30px;
+  margin: 0 0 32px;
+  font-size: 1.5rem;
+  font-weight: 700;
 }
 
 .branch-input-section {
   display: flex;
-  gap: 15px;
-  margin-bottom: 30px;
+  gap: 10px;
+  margin-bottom: 28px;
 }
 
 .branch-input-section input {
   flex: 1;
+  padding: 11px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.93rem;
+  font-family: inherit;
+  color: var(--text-dark);
+  transition: all var(--transition);
+  outline: none;
+}
 
-  padding: 12px;
-
-  border: 1px solid var(--border);
-  border-radius: 10px;
-
-  font-size: 16px;
+.branch-input-section input:focus {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
 }
 
 .branch-input-section button {
-  background: var(--primary);
+  background: var(--primary-gradient);
   color: white;
-
   border: none;
-  border-radius: 10px;
-
-  padding: 12px 20px;
-
+  border-radius: var(--radius-sm);
+  padding: 11px 20px;
+  font-weight: 600;
+  font-size: 0.9rem;
   cursor: pointer;
-  transition: 0.3s;
+  transition: all var(--transition);
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
 }
 
 .branch-input-section button:hover {
-  background: var(--primary-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);
 }
 
 .branch-list {
   list-style: none;
   padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .branch-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-
   background: #f8fafc;
+  padding: 14px 18px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  transition: all var(--transition);
+}
 
-  padding: 15px 20px;
-
-  border-radius: 12px;
-
-  margin-bottom: 15px;
-
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+.branch-item:hover {
+  border-color: rgba(99, 102, 241, 0.3);
+  background: #f0f0ff;
 }
 
 .branch-item span {
-  font-size: 18px;
+  font-size: 0.95rem;
   color: var(--text-dark);
   font-weight: 500;
 }
@@ -463,4 +746,33 @@ nav ul li a:hover {
 .branch-item .delete-btn {
   width: auto;
   margin: 0;
+  padding: 6px 14px;
+  font-size: 0.82rem;
+}
+
+/* ========================
+   RESPONSIVE
+======================== */
+@media (max-width: 640px) {
+  .dashboard-card {
+    margin: 24px 16px;
+    padding: 28px 20px;
+  }
+
+  .student-list-container {
+    padding: 16px;
+  }
+
+  .form-card {
+    padding: 24px 20px;
+  }
+
+  nav ul {
+    gap: 4px;
+  }
+
+  nav ul li a {
+    font-size: 0.82rem;
+    padding: 5px 10px;
+  }
 }

@@ -26,17 +26,15 @@ app.use((req, res, next) => {
 
 app.use("/api/auth", authRoutes);
 
+// File upload setup
 const storage = multer.diskStorage({
   destination: "./uploads",
-
   filename: (req, file, cb) => {
     cb(null, Date.now() + path.extname(file.originalname));
   },
 });
 
-const upload = multer({
-  storage,
-});
+const upload = multer({ storage });
 
 app.use("/uploads", express.static("uploads"));
 
@@ -46,6 +44,7 @@ app.post("/upload", authMiddleware, upload.single("profilePic"), (req, res) => {
   });
 });
 
+// In-memory student data
 const students = [
   {
     id: 1,
@@ -73,6 +72,8 @@ const students = [
   },
 ];
 
+// ── Routes ──────────────────────────────────────────
+
 app.get("/", (req, res) => {
   res.send("Backend Running");
 });
@@ -83,13 +84,10 @@ app.get("/students", authMiddleware, (req, res) => {
 
 app.get("/students/:id", authMiddleware, (req, res) => {
   const id = Number(req.params.id);
-
-  const student = students.find((student) => student.id === id);
+  const student = students.find((s) => s.id === id);
 
   if (!student) {
-    return res.status(404).json({
-      message: "Student not found",
-    });
+    return res.status(404).json({ message: "Student not found" });
   }
 
   res.json(student);
@@ -99,27 +97,14 @@ app.post("/students", authMiddleware, (req, res) => {
   const { id, name, email, course, age, cgpa, profilePic } = req.body;
 
   if (!id || !name || !course || cgpa === undefined) {
-    return res.status(400).json({
-      message: "All fields are required",
-    });
+    return res.status(400).json({ message: "All fields are required" });
   }
 
   if (age <= 0) {
-    return res.status(400).json({
-      message: "Age must be greater than 0",
-    });
+    return res.status(400).json({ message: "Age must be greater than 0" });
   }
 
-  const newStudent = {
-    id,
-    name,
-    email,
-    course,
-    age,
-    cgpa,
-    profilePic,
-  };
-
+  const newStudent = { id, name, email, course, age, cgpa, profilePic };
   students.push(newStudent);
 
   res.status(201).json({
@@ -128,29 +113,23 @@ app.post("/students", authMiddleware, (req, res) => {
   });
 });
 
+// FIX: destructure `age` from req.body so the age validation doesn't crash
 app.put("/students/:id", authMiddleware, (req, res) => {
   const id = Number(req.params.id);
-
   const updatedData = req.body;
+  const { age } = updatedData; // ← was missing, caused ReferenceError
 
-  const studentIndex = students.findIndex((student) => student.id === id);
+  const studentIndex = students.findIndex((s) => s.id === id);
 
   if (studentIndex === -1) {
-    return res.status(404).json({
-      message: "Student not found",
-    });
+    return res.status(404).json({ message: "Student not found" });
   }
 
-  if (age <= 0) {
-    return res.status(400).json({
-      message: "Age must be greater than 0",
-    });
+  if (age !== undefined && age <= 0) {
+    return res.status(400).json({ message: "Age must be greater than 0" });
   }
 
-  students[studentIndex] = {
-    ...students[studentIndex],
-    ...updatedData,
-  };
+  students[studentIndex] = { ...students[studentIndex], ...updatedData };
 
   res.json({
     message: "Student updated successfully",
@@ -160,17 +139,13 @@ app.put("/students/:id", authMiddleware, (req, res) => {
 
 app.delete("/students/:id", authMiddleware, (req, res) => {
   const id = Number(req.params.id);
-
-  const studentIndex = students.findIndex((student) => student.id === id);
+  const studentIndex = students.findIndex((s) => s.id === id);
 
   if (studentIndex === -1) {
-    return res.status(404).json({
-      message: "Student not found",
-    });
+    return res.status(404).json({ message: "Student not found" });
   }
 
   const deletedStudent = students[studentIndex];
-
   students.splice(studentIndex, 1);
 
   res.json({
@@ -179,28 +154,30 @@ app.delete("/students/:id", authMiddleware, (req, res) => {
   });
 });
 
-const PORT = process.env.PORT || 5000;
-
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
-
+// FIX: moved dashboard route BEFORE app.listen so it's always registered
 app.get("/dashboard/stats", authMiddleware, (req, res) => {
   const totalStudents = students.length;
 
-  const studentsPerBranch = {};
+  if (totalStudents === 0) {
+    return res.json({
+      totalStudents: 0,
+      studentsPerBranch: {},
+      averageCGPA: "0.00",
+      highestCGPAStudent: null,
+    });
+  }
 
+  const studentsPerBranch = {};
   students.forEach((student) => {
     const branch = student.course;
-
     studentsPerBranch[branch] = (studentsPerBranch[branch] || 0) + 1;
   });
 
   const averageCGPA =
-    students.reduce((sum, student) => sum + student.cgpa, 0) / totalStudents;
+    students.reduce((sum, s) => sum + s.cgpa, 0) / totalStudents;
 
-  const highestCGPAStudent = students.reduce((highest, student) =>
-    student.cgpa > highest.cgpa ? student : highest,
+  const highestCGPAStudent = students.reduce((highest, s) =>
+    s.cgpa > highest.cgpa ? s : highest
   );
 
   res.json({
@@ -209,4 +186,10 @@ app.get("/dashboard/stats", authMiddleware, (req, res) => {
     averageCGPA: averageCGPA.toFixed(2),
     highestCGPAStudent,
   });
+});
+
+// ── Start server ────────────────────────────────────
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
