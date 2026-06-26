@@ -11,6 +11,7 @@ import StudentDetails from "./pages/StudentDetails";
 import Navbar from "./components/Navbar";
 import { useLocation } from "react-router-dom";
 import ManageBranches from "../pages/ManageBranches";
+import { Toaster } from "react-hot-toast";
 
 function ProtectedRoute({ children }) {
   const token = localStorage.getItem("token");
@@ -88,6 +89,9 @@ function AppContent() {
 function App() {
   return (
     <>
+
+     <Toaster position="top-right" />
+     
       <BrowserRouter>
         <AppContent />
       </BrowserRouter>
