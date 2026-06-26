@@ -7,10 +7,18 @@ function StudentDetails() {
   const { students } = useContext(StudentContext);
   const { id } = useParams();
 
-  const student = students.find((student) => student.id === Number(id));
+  // FIX: MongoDB _id is a string, Number(id) would return NaN and always fail
+  const student = students.find((s) => String(s.id) === String(id));
 
   if (!student) {
-    return <h2>Student not found.</h2>;
+    return (
+      <div className="student-details-page">
+        <h1>Student Details</h1>
+        <div className="student-details-card">
+          <h2>Student not found.</h2>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -27,25 +35,10 @@ function StudentDetails() {
           />
         )}
 
-        <p>
-          <strong>Email: </strong>
-          {student.email}
-        </p>
-
-        <p>
-          <strong>Course: </strong>
-          {student.course}
-        </p>
-
-        <p>
-          <strong>Age: </strong>
-          {student.age}
-        </p>
-
-        <p>
-          <strong>Cgpa: </strong>
-          {student.cgpa}
-        </p>
+        <p><strong>Email: </strong>{student.email}</p>
+        <p><strong>Course: </strong>{student.course}</p>
+        <p><strong>Age: </strong>{student.age}</p>
+        <p><strong>CGPA: </strong>{student.cgpa}</p>
       </div>
     </div>
   );

@@ -7,9 +7,9 @@ import toast from "react-hot-toast";
 function EditStudent() {
   const navigate = useNavigate();
   const { id } = useParams();
-
   const { students, fetchStudents } = useContext(StudentContext);
 
+  // FIX: MongoDB _id is a string, Number(id) would return NaN and always fail
   const student = students.find((s) => String(s.id) === String(id));
 
   const [name, setName] = useState(student?.name || "");
@@ -20,7 +20,16 @@ function EditStudent() {
   const [profilePic, setProfilePic] = useState(null);
 
   if (!student) {
-    return <h2>Student Not Found</h2>;
+    return (
+      <div className="form-page">
+        <h1>Edit Student</h1>
+        <div className="form-card">
+          <p style={{ textAlign: "center", color: "#64748b" }}>
+            Student not found.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   async function handleUpdate() {
@@ -32,14 +41,10 @@ function EditStudent() {
     let imageUrl = student.profilePic;
 
     try {
-      // Upload new image if user selected one
       if (profilePic) {
         const formData = new FormData();
-
         formData.append("profilePic", profilePic);
-
         const uploadResponse = await uploadProfilePic(formData);
-
         imageUrl = uploadResponse.data.imageUrl;
       }
 
@@ -53,17 +58,16 @@ function EditStudent() {
       };
 
       await updateStudent(id, updatedStudent);
-
       await fetchStudents();
 
       toast.success("Student Updated Successfully");
-
       navigate("/students");
     } catch (error) {
       console.log(error);
       toast.error("Failed to update student");
     }
   }
+
   return (
     <div className="form-page">
       <h1>Edit Student</h1>
@@ -103,13 +107,12 @@ function EditStudent() {
           onChange={(e) => setAge(e.target.value)}
         />
 
-        <label>Cgpa</label>
+        <label>CGPA</label>
         <input
           type="text"
           value={cgpa}
           onChange={(e) => {
             const value = e.target.value;
-
             if (/^\d*\.?\d*$/.test(value)) {
               if (value === "" || (Number(value) >= 0 && Number(value) <= 10)) {
                 setCgpa(value);
@@ -125,6 +128,7 @@ function EditStudent() {
             className="profile-image"
           />
         )}
+
         <label>Update Profile Picture</label>
         <input
           type="file"
@@ -132,9 +136,7 @@ function EditStudent() {
           onChange={(e) => setProfilePic(e.target.files[0])}
         />
 
-        <button type="submit" className="primary-btn">
-          Update Student
-        </button>
+        <button type="submit">Update Student</button>
       </form>
     </div>
   );

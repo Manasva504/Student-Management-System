@@ -13,21 +13,17 @@ function StudentProvider({ children }) {
   async function fetchStudents() {
     try {
       const response = await getStudents();
-
       setStudents(response.data);
     } catch (error) {
+      // FIX: silently fail instead of crashing the whole app
+      // This happens when the token is missing/expired on first load
       console.log("Error fetching students:", error);
+      setStudents([]);
     }
   }
 
   return (
-    <StudentContext.Provider
-      value={{
-        students,
-        setStudents,
-        fetchStudents,
-      }}
-    >
+    <StudentContext.Provider value={{ students, setStudents, fetchStudents }}>
       {children}
     </StudentContext.Provider>
   );
