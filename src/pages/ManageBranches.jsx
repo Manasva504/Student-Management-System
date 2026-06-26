@@ -38,29 +38,39 @@ function ManageBranches() {
   };
 
   return (
-    <div className="branch-page">
-      <h2>Manage Branches</h2>
+  <div className="manage-branches-page">
+    <div className="manage-branches-card">
+      <h1>Manage Branches</h1>
 
-      <input
-        type="text"
-        placeholder="Enter branch"
-        value={branch}
-        onChange={(e) => setBranch(e.target.value)}
-      />
+      <div className="branch-input-section">
+        <input
+          type="text"
+          placeholder="Enter branch"
+          value={newBranch}
+          onChange={(e) => setNewBranch(e.target.value)}
+        />
 
-      <button onClick={addBranch}>Add Branch</button>
+        <button onClick={handleAddBranch}>
+          Add Branch
+        </button>
+      </div>
 
-      <ul>
-        {branches.map((b) => (
-          <li key={b}>
-            {b}
+      <ul className="branch-list">
+        {branches.map((branch, index) => (
+          <li key={index} className="branch-item">
+            <span>{branch}</span>
 
-            <button onClick={() => deleteBranch(b)}>Delete</button>
+            <button
+              className="delete-btn"
+              onClick={() => handleDeleteBranch(branch)}
+            >
+              Delete
+            </button>
           </li>
         ))}
       </ul>
     </div>
-  );
-}
+  </div>
+);
 
 export default ManageBranches;
