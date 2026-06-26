@@ -10,7 +10,7 @@ function EditStudent() {
 
   const { students, fetchStudents } = useContext(StudentContext);
 
-  const student = students.find((s) => s.id === Number(id));
+  const student = students.find((s) => String(s.id) === String(id));
 
   const [name, setName] = useState(student?.name || "");
   const [email, setEmail] = useState(student?.email || "");
