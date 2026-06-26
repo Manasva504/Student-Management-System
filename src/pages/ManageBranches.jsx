@@ -70,6 +70,5 @@ function ManageBranches() {
       </div>
     </div>
   );
-
-  export default ManageBranches;
 }
+export default ManageBranches;
