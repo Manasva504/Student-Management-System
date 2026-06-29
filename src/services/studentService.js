@@ -54,7 +54,9 @@ export const getDashboardStats = () => {
   return axios.get(
     "https://student-management-system-zk2b.onrender.com/dashboard/stats",
     {
-      headers: {},
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
     },
   );
 };
