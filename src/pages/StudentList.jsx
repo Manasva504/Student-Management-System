@@ -22,18 +22,19 @@ function StudentList() {
   }, []);
 
   const fetchStudents = async () => {
-  try {
-    const response = await getStudents(search, page, 5);
+    try {
+      const response = await getStudents(search, page, 5);
 
-    console.log("FULL RESPONSE:", response.data);
+      console.log("FULL RESPONSE:", response.data);
 
-    setStudents(response.data);
-setTotalPages(Math.ceil(response.data.length / 5));
-  } catch (error) {
-    console.log(error);
-    setStudents([]);
-  }
-};
+      setStudents(response.data.data || []);
+      setTotalPages(response.data.totalPages || 1);
+    } catch (error) {
+      console.log(error);
+      setStudents([]);
+      setTotalPages(1);
+    }
+  };
 
   const filteredStudents =
     branchFilter === "All"
