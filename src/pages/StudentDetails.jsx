@@ -1,21 +1,31 @@
-import { useContext } from "react";
-import { StudentContext } from "../context/StudentContext";
+import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import { getStudentById } from "../services/studentService";
 import "../App.css";
 
 function StudentDetails() {
-  const { students } = useContext(StudentContext);
   const { id } = useParams();
+  const [student, setStudent] = useState(null);
 
-  // FIX: MongoDB _id is a string, Number(id) would return NaN and always fail
-  const student = students.find((s) => String(s.id) === String(id));
+  useEffect(() => {
+    fetchStudent();
+  }, []);
+
+  const fetchStudent = async () => {
+    try {
+      const response = await getStudentById(id);
+      setStudent(response.data);
+    } catch (error) {
+      console.log(error);
+    }
+  };
 
   if (!student) {
     return (
       <div className="student-details-page">
         <h1>Student Details</h1>
         <div className="student-details-card">
-          <h2>Student not found.</h2>
+          <h2>Loading...</h2>
         </div>
       </div>
     );
@@ -24,6 +34,7 @@ function StudentDetails() {
   return (
     <div className="student-details-page">
       <h1>Student Details</h1>
+
       <div className="student-details-card">
         <h2>{student.name}</h2>
 
@@ -35,10 +46,25 @@ function StudentDetails() {
           />
         )}
 
-        <p><strong>Email: </strong>{student.email}</p>
-        <p><strong>Course: </strong>{student.course}</p>
-        <p><strong>Age: </strong>{student.age}</p>
-        <p><strong>CGPA: </strong>{student.cgpa}</p>
+        <p>
+          <strong>Email: </strong>
+          {student.email}
+        </p>
+
+        <p>
+          <strong>Course: </strong>
+          {student.course}
+        </p>
+
+        <p>
+          <strong>Age: </strong>
+          {student.age}
+        </p>
+
+        <p>
+          <strong>CGPA: </strong>
+          {student.cgpa}
+        </p>
       </div>
     </div>
   );

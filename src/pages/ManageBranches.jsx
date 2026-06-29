@@ -15,22 +15,36 @@ function ManageBranches() {
   }, []);
 
   useEffect(() => {
-    localStorage.setItem("branches", JSON.stringify(branches));
-  }, [branches]);
+    const savedBranches = JSON.parse(localStorage.getItem("branches")) || [];
+
+    setBranches(savedBranches);
+  }, []);
 
   const addBranch = () => {
     if (!branch.trim()) return;
+
     if (branches.includes(branch.trim())) {
       toast.error("Branch already exists");
       return;
     }
-    setBranches([...branches, branch.trim()]);
+
+    const updatedBranches = [...branches, branch.trim()];
+
+    setBranches(updatedBranches);
+
+    localStorage.setItem("branches", JSON.stringify(updatedBranches));
+
     setBranch("");
     toast.success("Branch added");
   };
 
   const deleteBranch = (branchToDelete) => {
-    setBranches(branches.filter((b) => b !== branchToDelete));
+    const updatedBranches = branches.filter((b) => b !== branchToDelete);
+
+    setBranches(updatedBranches);
+
+    localStorage.setItem("branches", JSON.stringify(updatedBranches));
+
     toast.success("Branch removed");
   };
 

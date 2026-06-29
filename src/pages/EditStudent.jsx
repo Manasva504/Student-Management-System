@@ -1,35 +1,51 @@
-import { useContext, useState } from "react";
+import { useState, useEffect, useContext } from "react";
 import { StudentContext } from "../context/StudentContext";
 import { useParams, useNavigate } from "react-router-dom";
-import { updateStudent, uploadProfilePic } from "../services/studentService";
+import {
+  updateStudent,
+  uploadProfilePic,
+  getStudentById,
+} from "../services/studentService";
 import toast from "react-hot-toast";
 
 function EditStudent() {
   const navigate = useNavigate();
   const { id } = useParams();
-  const { students, fetchStudents } = useContext(StudentContext);
+  const { fetchStudents } = useContext(StudentContext);
 
-  // FIX: MongoDB _id is a string, Number(id) would return NaN and always fail
-  const student = students.find((s) => String(s.id) === String(id));
+  const [loading, setLoading] = useState(true);
 
-  const [name, setName] = useState(student?.name || "");
-  const [email, setEmail] = useState(student?.email || "");
-  const [course, setCourse] = useState(student?.course || "");
-  const [age, setAge] = useState(student?.age || "");
-  const [cgpa, setCgpa] = useState(student?.cgpa || "");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [course, setCourse] = useState("");
+  const [age, setAge] = useState("");
+  const [cgpa, setCgpa] = useState("");
+  const [oldProfilePic, setOldProfilePic] = useState("");
   const [profilePic, setProfilePic] = useState(null);
 
-  if (!student) {
-    return (
-      <div className="form-page">
-        <h1>Edit Student</h1>
-        <div className="form-card">
-          <p style={{ textAlign: "center", color: "#64748b" }}>
-            Student not found.
-          </p>
-        </div>
-      </div>
-    );
+  useEffect(() => {
+    fetchStudent();
+  }, []);
+
+  async function fetchStudent() {
+    try {
+      const response = await getStudentById(id);
+
+      const student = response.data;
+
+      setName(student.name);
+      setEmail(student.email);
+      setCourse(student.course);
+      setAge(student.age);
+      setCgpa(student.cgpa);
+      setOldProfilePic(student.profilePic);
+
+      setLoading(false);
+    } catch (error) {
+      console.log(error);
+      toast.error("Student not found");
+      navigate("/students");
+    }
   }
 
   async function handleUpdate() {
@@ -38,13 +54,15 @@ function EditStudent() {
       return;
     }
 
-    let imageUrl = student.profilePic;
+    let imageUrl = oldProfilePic;
 
     try {
       if (profilePic) {
         const formData = new FormData();
         formData.append("profilePic", profilePic);
+
         const uploadResponse = await uploadProfilePic(formData);
+
         imageUrl = uploadResponse.data.imageUrl;
       }
 
@@ -58,14 +76,26 @@ function EditStudent() {
       };
 
       await updateStudent(id, updatedStudent);
+
       await fetchStudents();
 
       toast.success("Student Updated Successfully");
+
       navigate("/students");
     } catch (error) {
       console.log(error);
       toast.error("Failed to update student");
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="form-page">
+        <div className="form-card">
+          <h2>Loading...</h2>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -111,20 +141,13 @@ function EditStudent() {
         <input
           type="text"
           value={cgpa}
-          onChange={(e) => {
-            const value = e.target.value;
-            if (/^\d*\.?\d*$/.test(value)) {
-              if (value === "" || (Number(value) >= 0 && Number(value) <= 10)) {
-                setCgpa(value);
-              }
-            }
-          }}
+          onChange={(e) => setCgpa(e.target.value)}
         />
 
-        {student.profilePic && (
+        {oldProfilePic && (
           <img
-            src={`https://student-management-system-zk2b.onrender.com${student.profilePic}`}
-            alt={student.name}
+            src={`https://student-management-system-zk2b.onrender.com${oldProfilePic}`}
+            alt="Student"
             className="profile-image"
           />
         )}
@@ -136,7 +159,9 @@ function EditStudent() {
           onChange={(e) => setProfilePic(e.target.files[0])}
         />
 
-        <button type="submit">Update Student</button>
+        <button type="submit" className="primary-btn">
+          Update Student
+        </button>
       </form>
     </div>
   );

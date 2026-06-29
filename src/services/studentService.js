@@ -2,10 +2,10 @@ import axios from "axios";
 
 const API_URL = "https://student-management-system-zk2b.onrender.com/students";
 
-export const getStudents = () => {
+export const getStudents = (search = "", page = 1, limit = 5) => {
   const token = localStorage.getItem("token");
 
-  return axios.get(API_URL, {
+  return axios.get(`${API_URL}?search=${search}&page=${page}&limit=${limit}`, {
     headers: {
       Authorization: token,
     },

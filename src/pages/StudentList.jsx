@@ -7,33 +7,39 @@ function StudentList() {
   const [students, setStudents] = useState([]);
   const [branchFilter, setBranchFilter] = useState("All");
   const [sortOrder, setSortOrder] = useState("default");
-
-  // FIX: read branches from localStorage so this stays in sync with ManageBranches
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [branches, setBranches] = useState([]);
 
   useEffect(() => {
     fetchStudents();
+  }, [search, page]);
 
-    // Load branches saved by ManageBranches page
+  useEffect(() => {
     const savedBranches = JSON.parse(localStorage.getItem("branches")) || [];
     setBranches(savedBranches);
   }, []);
 
   const fetchStudents = async () => {
-    try {
-      const response = await getStudents();
-      setStudents(response.data);
-    } catch (error) {
-      console.log(error);
-    }
-  };
+  try {
+    const response = await getStudents(search, page, 5);
+
+    console.log("FULL RESPONSE:", response.data);
+
+    setStudents(response.data);
+setTotalPages(Math.ceil(response.data.length / 5));
+  } catch (error) {
+    console.log(error);
+    setStudents([]);
+  }
+};
 
   const filteredStudents =
     branchFilter === "All"
-      ? students
-      : students.filter((student) => student.course === branchFilter);
-
-  const sortedStudents = [...filteredStudents];
+      ? students || []
+      : (students || []).filter((student) => student.course === branchFilter);
+  const sortedStudents = [...(filteredStudents || [])];
 
   if (sortOrder === "asc") {
     sortedStudents.sort((a, b) => a.name.localeCompare(b.name));
@@ -44,13 +50,19 @@ function StudentList() {
   } else if (sortOrder === "cgpa-low") {
     sortedStudents.sort((a, b) => a.cgpa - b.cgpa);
   }
-
   return (
     <div className="student-list-container">
       <h1>Student List</h1>
 
       <div className="filter-controls">
-        {/* FIX: branch options now come from localStorage (set by ManageBranches) */}
+        <input
+          type="text"
+          placeholder="Search by name or email..."
+          className="student-filter"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+
         <select
           className="student-filter"
           value={branchFilter}
@@ -79,7 +91,9 @@ function StudentList() {
 
       <div className="student-grid">
         {sortedStudents.length === 0 ? (
-          <p style={{ color: "white", textAlign: "center", gridColumn: "1/-1" }}>
+          <p
+            style={{ color: "white", textAlign: "center", gridColumn: "1/-1" }}
+          >
             No students found.
           </p>
         ) : (
@@ -88,8 +102,31 @@ function StudentList() {
           ))
         )}
       </div>
+
+      {(students || []).length > 0 && (
+        <div className="pagination">
+          <button
+            className="primary-btn"
+            onClick={() => setPage(page - 1)}
+            disabled={page === 1}
+          >
+            Previous
+          </button>
+
+          <span style={{ color: "white" }}>
+            Page {page} of {totalPages}
+          </span>
+
+          <button
+            className="primary-btn"
+            onClick={() => setPage(page + 1)}
+            disabled={page === totalPages}
+          >
+            Next
+          </button>
+        </div>
+      )}
     </div>
   );
 }
-
 export default StudentList;

@@ -17,11 +17,11 @@ connectDB();
 
 // ── Student Schema (defined here, no separate file needed) ──
 const studentSchema = new mongoose.Schema({
-  name:       { type: String, required: true },
-  email:      { type: String, required: true },
-  course:     { type: String, required: true },
-  age:        { type: Number, required: true },
-  cgpa:       { type: Number, required: true },
+  name: { type: String, required: true },
+  email: { type: String, required: true },
+  course: { type: String, required: true },
+  age: { type: Number, required: true },
+  cgpa: { type: Number, required: true },
   profilePic: { type: String, default: "" },
 });
 
@@ -54,18 +54,65 @@ app.post("/upload", authMiddleware, upload.single("profilePic"), (req, res) => {
   res.json({ imageUrl: `/uploads/${req.file.filename}` });
 });
 
-// ── Routes ───────────────────────────────────────────────────
 
 app.get("/", (req, res) => {
   res.send("Backend Running");
 });
 
-// GET all students
+// GET all students with search, filter, sort and pagination
 app.get("/students", authMiddleware, async (req, res) => {
   try {
-    const students = await Student.find();
+    const {
+      search,
+      branch,
+      minCgpa,
+      maxCgpa,
+      sortBy,
+      page = 1,
+      limit = 5,
+    } = req.query;
 
-    // Map _id to id so the frontend keeps working without any changes
+    let query = {};
+
+    // SEARCH
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+        { _id: mongoose.Types.ObjectId.isValid(search) ? search : null },
+      ];
+    }
+
+    // FILTER BY BRANCH
+    if (branch) {
+      query.course = branch;
+    }
+
+    // FILTER BY CGPA RANGE
+    if (minCgpa || maxCgpa) {
+      query.cgpa = {};
+
+      if (minCgpa) query.cgpa.$gte = Number(minCgpa);
+
+      if (maxCgpa) query.cgpa.$lte = Number(maxCgpa);
+    }
+
+    // SORTING
+    let sortOptions = {};
+
+    if (sortBy === "name") sortOptions.name = 1;
+
+    if (sortBy === "cgpa") sortOptions.cgpa = -1;
+
+    if (sortBy === "course") sortOptions.course = 1;
+
+    const totalStudents = await Student.countDocuments(query);
+
+    const students = await Student.find(query)
+      .sort(sortOptions)
+      .skip((page - 1) * limit)
+      .limit(Number(limit));
+
     const formatted = students.map((s) => ({
       id: s._id,
       name: s.name,
@@ -76,10 +123,21 @@ app.get("/students", authMiddleware, async (req, res) => {
       profilePic: s.profilePic,
     }));
 
-    res.json(formatted);
+    res.json({
+      success: true,
+      message: "Students fetched successfully",
+      data: formatted,
+      totalStudents,
+      currentPage: Number(page),
+      totalPages: Math.ceil(totalStudents / limit),
+    });
   } catch (error) {
     console.log(error);
-    res.status(500).json({ message: "Server Error" });
+    res.status(500).json({
+      success: false,
+      message: "Server Error",
+      data: null,
+    });
   }
 });
 
@@ -124,7 +182,14 @@ app.post("/students", authMiddleware, async (req, res) => {
       return res.status(400).json({ message: "CGPA must be between 0 and 10" });
     }
 
-    const newStudent = new Student({ name, email, course, age, cgpa, profilePic });
+    const newStudent = new Student({
+      name,
+      email,
+      course,
+      age,
+      cgpa,
+      profilePic,
+    });
     await newStudent.save();
 
     res.status(201).json({
@@ -153,7 +218,7 @@ app.put("/students/:id", authMiddleware, async (req, res) => {
     const updated = await Student.findByIdAndUpdate(
       req.params.id,
       { name, email, course, age, cgpa, profilePic },
-      { new: true }
+      { new: true },
     );
 
     if (!updated) {
@@ -213,7 +278,7 @@ app.get("/dashboard/stats", authMiddleware, async (req, res) => {
       students.reduce((sum, s) => sum + s.cgpa, 0) / totalStudents;
 
     const highestCGPAStudent = students.reduce((highest, s) =>
-      s.cgpa > highest.cgpa ? s : highest
+      s.cgpa > highest.cgpa ? s : highest,
     );
 
     res.json({

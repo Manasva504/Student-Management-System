@@ -27,6 +27,7 @@ function StudentCard({ student }) {
       toast.success("Failed to delete student");
     }
   }
+  console.log(student.profilePic);
   return (
     <div className="student-card">
       {student.profilePic && (
