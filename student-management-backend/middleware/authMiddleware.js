@@ -3,7 +3,17 @@ const jwt = require("jsonwebtoken");
 const authMiddleware = (req, res, next) => {
   try {
     // Get token from headers
-    const token = req.header("Authorization");
+    const authHeader = req.header("Authorization");
+
+    if (!authHeader) {
+      return res
+        .status(401)
+        .json({ message: "Access denied. No token provided" });
+    }
+
+    const token = authHeader.startsWith("Bearer ")
+      ? authHeader.slice(7)
+      : authHeader;
 
     if (!token) {
       return res.status(401).json({
@@ -12,10 +22,7 @@ const authMiddleware = (req, res, next) => {
     }
 
     // Verify token
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET
-    );
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     req.user = decoded;
 
