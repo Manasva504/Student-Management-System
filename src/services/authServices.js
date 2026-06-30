@@ -11,8 +11,13 @@ export const loginUser = (userData) => {
 };
 
 export const forgotPassword = (email) => {
-  return axios.post(
-    "https://student-management-system-zk2b.onrender.com/api/auth/forgot-password",
-    { email },
-  );
+  return axios.post(`${API_URL}/forgot-password`, { email });
+};
+
+export const verifyOtp = (email, otp) => {
+  return axios.post(`${API_URL}/verify-otp`, { email, otp });
+};
+
+export const resetPassword = (email, password) => {
+  return axios.post(`${API_URL}/reset-password`, { email, password });
 };
