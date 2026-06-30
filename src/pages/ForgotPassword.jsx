@@ -2,6 +2,7 @@ import { useState } from "react";
 import { forgotPassword } from "../services/authServices";
 import { useNavigate } from "react-router-dom";
 import "../App.css";
+import toast from "react-hot-toast";
 
 function ForgotPassword() {
   const navigate = useNavigate();
@@ -17,7 +18,7 @@ function ForgotPassword() {
 
       console.log(response);
 
-      alert(response.data.message);
+      toast.success(response.data.message);
 
       localStorage.setItem("resetEmail", email);
 
@@ -25,7 +26,7 @@ function ForgotPassword() {
     } catch (error) {
       console.log(error);
 
-      alert(error.response?.data?.message || "Something went wrong");
+      toast.error(error.response?.data?.message || "Something went wrong");
     }
   };
 
