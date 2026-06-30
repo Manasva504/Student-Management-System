@@ -115,7 +115,10 @@ router.post("/forgot-password", async (req, res) => {
     user.resetOtpExpiry = Date.now() + 5 * 60 * 1000;
 
     await user.save();
-
+    console.log("EMAIL USER:", process.env.EMAIL_USER);
+    console.log("EMAIL PASS EXISTS:", !!process.env.EMAIL_PASS);
+    console.log("Sending OTP to:", email);
+    console.log("OTP:", otp);
     await sendEmail(
       email,
       "Password Reset OTP",
