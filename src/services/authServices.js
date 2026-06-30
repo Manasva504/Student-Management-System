@@ -9,3 +9,10 @@ export const registerUser = (userData) => {
 export const loginUser = (userData) => {
   return axios.post(`${API_URL}/login`, userData);
 };
+
+export const forgotPassword = (email) => {
+  return axios.post(
+    "https://student-management-system-zk2b.onrender.com/api/auth/forgot-password",
+    { email },
+  );
+};

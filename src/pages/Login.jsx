@@ -27,9 +27,7 @@ function Login() {
     } catch (error) {
       console.log(error);
 
-      toast.error(
-        error.response?.data?.message || "Login Failed"
-      );
+      toast.error(error.response?.data?.message || "Login Failed");
     }
   }
 
@@ -59,8 +57,10 @@ function Login() {
         </button>
 
         <p>
-          Don't have an account?{" "}
-          <Link to="/register">Register</Link>
+          Don't have an account? <Link to="/register">Register</Link>
+        </p>
+        <p>
+          <Link to="/forgot-password">Forgot Password?</Link>
         </p>
       </form>
     </div>
