@@ -786,3 +786,14 @@ nav ul li a:hover {
   gap: 20px;
   margin-top: 30px;
 }
+
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}

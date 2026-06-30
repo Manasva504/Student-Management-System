@@ -32,9 +32,12 @@ function StudentCard({ student }) {
     <div className="student-card">
       {student.profilePic && (
         <img
-          src={`https://student-management-system-zk2b.onrender.com${student.profilePic}`}
+          src={
+            student.profilePic
+              ? `https://student-management-system-zk2b.onrender.com${student.profilePic}`
+              : "/default-avatar.png"
+          }
           alt={student.name}
-          className="profile-image"
         />
       )}
       <h3>{student.name}</h3>
