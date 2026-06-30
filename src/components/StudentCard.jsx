@@ -37,6 +37,7 @@ function StudentCard({ student }) {
               ? `https://student-management-system-zk2b.onrender.com${student.profilePic}`
               : "/default-avatar.png"
           }
+          className="profile-image"
           alt={student.name}
         />
       )}
