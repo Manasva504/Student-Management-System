@@ -25,7 +25,6 @@ function StudentList() {
 
   const fetchStudents = async () => {
     try {
-      const response = await getStudents(search, page, 6);
       const response = await getStudents(search, page, 6, minCgpa, maxCgpa);
 
       console.log("FULL RESPONSE:", response.data);
