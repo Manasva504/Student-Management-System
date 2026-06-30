@@ -44,7 +44,9 @@ router.post("/login", async (req, res) => {
   } catch (error) {
     console.log(error);
     res.status(500).json({
+      success: false,
       message: "Server Error",
+      data: null,
     });
   }
 });
@@ -88,7 +90,9 @@ router.post("/register", async (req, res) => {
     console.log(error);
 
     res.status(500).json({
+      success: false,
       message: "Server Error",
+      data: null,
     });
   }
 });

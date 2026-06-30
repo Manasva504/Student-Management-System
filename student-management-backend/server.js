@@ -2,7 +2,7 @@ const dotenv = require("dotenv");
 const express = require("express");
 const cors = require("cors");
 dotenv.config();
-
+const errorHandler = require("./middleware/errorHandler");
 const connectDB = require("./config/db");
 const authRoutes = require("./routes/authRoutes");
 const authMiddleware = require("./middleware/authMiddleware");
@@ -53,7 +53,6 @@ app.use("/uploads", express.static("uploads"));
 app.post("/upload", authMiddleware, upload.single("profilePic"), (req, res) => {
   res.json({ imageUrl: `/uploads/${req.file.filename}` });
 });
-
 
 app.get("/", (req, res) => {
   res.send("Backend Running");
@@ -161,7 +160,11 @@ app.get("/students/:id", authMiddleware, async (req, res) => {
     });
   } catch (error) {
     console.log(error);
-    res.status(500).json({ message: "Server Error" });
+    res.status(500).json({
+      success: false,
+      message: "Server Error",
+      data: null,
+    });
   }
 });
 
@@ -198,7 +201,11 @@ app.post("/students", authMiddleware, async (req, res) => {
     });
   } catch (error) {
     console.log(error);
-    res.status(500).json({ message: "Server Error" });
+    res.status(500).json({
+      success: false,
+      message: "Server Error",
+      data: null,
+    });
   }
 });
 
@@ -231,7 +238,11 @@ app.put("/students/:id", authMiddleware, async (req, res) => {
     });
   } catch (error) {
     console.log(error);
-    res.status(500).json({ message: "Server Error" });
+    res.status(500).json({
+      success: false,
+      message: "Server Error",
+      data: null,
+    });
   }
 });
 
@@ -250,7 +261,11 @@ app.delete("/students/:id", authMiddleware, async (req, res) => {
     });
   } catch (error) {
     console.log(error);
-    res.status(500).json({ message: "Server Error" });
+    res.status(500).json({
+      success: false,
+      message: "Server Error",
+      data: null,
+    });
   }
 });
 
@@ -289,12 +304,17 @@ app.get("/dashboard/stats", authMiddleware, async (req, res) => {
     });
   } catch (error) {
     console.log(error);
-    res.status(500).json({ message: "Server Error" });
+    res.status(500).json({
+      success: false,
+      message: "Server Error",
+      data: null,
+    });
   }
 });
 
 // ── Start Server ─────────────────────────────────────────────
 const PORT = process.env.PORT || 5000;
+app.use(errorHandler);
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });

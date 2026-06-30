@@ -2,15 +2,18 @@ import axios from "axios";
 
 const API_URL = "https://student-management-system-zk2b.onrender.com/students";
 
-export const getStudents = (search = "", page = 1, limit = 5) => {
-  const token = localStorage.getItem("token");
+export const getStudents =
+  ((search = ""), (page = 1), (limit = 6), (minCgpa = ""), (maxCgpa = ""));
+const token = localStorage.getItem("token");
 
-  return axios.get(`${API_URL}?search=${search}&page=${page}&limit=${limit}`, {
+return axios.get(
+  `${API_URL}?search=${search}&page=${page}&limit=${limit}&minCgpa=${minCgpa}&maxCgpa=${maxCgpa}`,
+  {
     headers: {
       Authorization: `Bearer ${token}`,
     },
-  });
-};
+  },
+);
 
 export const getStudentById = (id) => {
   const token = localStorage.getItem("token");

@@ -11,10 +11,12 @@ function StudentList() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [branches, setBranches] = useState([]);
+  const [minCgpa, setMinCgpa] = useState("");
+  const [maxCgpa, setMaxCgpa] = useState("");
 
   useEffect(() => {
     fetchStudents();
-  }, [search, page]);
+  }, [search, page, minCgpa, maxCgpa]);
 
   useEffect(() => {
     const savedBranches = JSON.parse(localStorage.getItem("branches")) || [];
@@ -24,6 +26,7 @@ function StudentList() {
   const fetchStudents = async () => {
     try {
       const response = await getStudents(search, page, 6);
+      const response = await getStudents(search, page, 6, minCgpa, maxCgpa);
 
       console.log("FULL RESPONSE:", response.data);
 
@@ -62,6 +65,22 @@ function StudentList() {
           className="student-filter"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
+        />
+
+        <input
+          type="number"
+          placeholder="Min CGPA"
+          className="student-filter"
+          value={minCgpa}
+          onChange={(e) => setMinCgpa(e.target.value)}
+        />
+
+        <input
+          type="number"
+          placeholder="Max CGPA"
+          className="student-filter"
+          value={maxCgpa}
+          onChange={(e) => setMaxCgpa(e.target.value)}
         />
 
         <select
