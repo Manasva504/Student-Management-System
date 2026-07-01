@@ -5,22 +5,21 @@ function ResetPassword() {
   const navigate = useNavigate();
   const [email, setEmail] = useState(localStorage.getItem("resetEmail") || "");
   const [password, setPassword] = useState("");
+  const API_URL =
+    "https://student-management-system-zk2b.onrender.com/api/auth";
 
   const handleResetPassword = async () => {
     try {
-      const response = await fetch(
-        "http://localhost:5000/api/auth/reset-password",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            email,
-            password,
-          }),
+      const response = await fetch(`${API_URL}/reset-password`, ... {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-      );
+        body: JSON.stringify({
+          email,
+          password,
+        }),
+      });
 
       const data = await response.json();
 
@@ -40,22 +39,20 @@ function ResetPassword() {
         <h2>Reset Password</h2>
 
         <form
-  onSubmit={(e) => {
-    e.preventDefault();
-    handleResetPassword();
-  }}
->
-  <input
-    type="password"
-    placeholder="New Password"
-    value={password}
-    onChange={(e) => setPassword(e.target.value)}
-  />
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleResetPassword();
+          }}
+        >
+          <input
+            type="password"
+            placeholder="New Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
 
-  <button type="submit">
-    Reset Password
-  </button>
-</form>
+          <button type="submit">Reset Password</button>
+        </form>
       </div>
     </div>
   );
