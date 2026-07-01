@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 
 function ResetPassword() {
   const navigate = useNavigate();
@@ -31,19 +32,20 @@ function ResetPassword() {
         return;
       }
 
-      alert(data.message);
+      if (response.ok) {
+        toast.success(data.message || "Password reset successful");
 
-      localStorage.removeItem("resetEmail");
+        localStorage.removeItem("resetEmail");
+
+        navigate("/login");
+      } else {
+        toast.error(data.message || "Failed to reset password");
+      }
 
       navigate("/login");
     } catch (error) {
       console.log(error);
-
-      if (error.response) {
-        console.log(error.response.data);
-      }
-
-      alert(error.message);
+      toast.error("Something went wrong");
     }
   };
 

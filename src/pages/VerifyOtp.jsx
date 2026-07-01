@@ -1,31 +1,34 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 
 function VerifyOtp() {
-    const navigate = useNavigate();
+  const navigate = useNavigate();
   const [email, setEmail] = useState(localStorage.getItem("resetEmail") || "");
   const [otp, setOtp] = useState("");
-  const API_URL = "https://student-management-system-zk2b.onrender.com/api/auth";
+  const API_URL =
+    "https://student-management-system-zk2b.onrender.com/api/auth";
 
   const handleVerifyOtp = async () => {
     try {
-      const response = await fetch(`${API_URL}/verify-otp`, 
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ email, otp }),
+      const response = await fetch(`${API_URL}/verify-otp`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-      );
+        body: JSON.stringify({ email, otp }),
+      });
 
       const data = await response.json();
 
-      alert(data.message);
-
-      navigate("/reset-password");
+      if (response.ok) {
+        toast.success(data.message || "OTP verified successfully");
+        navigate("/reset-password");
+      } else {
+        toast.error(data.message || "Invalid OTP");
+      }
     } catch (error) {
-      alert("Something went wrong");
+      toast.error("Something went wrong");
     }
   };
 
