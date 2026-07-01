@@ -28,7 +28,7 @@ function ResetPassword() {
       console.log("Response:", data);
 
       if (!response.ok) {
-        alert(data.message);
+        toast.error(data.message);
         return;
       }
 
@@ -37,7 +37,6 @@ function ResetPassword() {
 
         localStorage.removeItem("resetEmail");
 
-        navigate("/login");
       } else {
         toast.error(data.message || "Failed to reset password");
       }

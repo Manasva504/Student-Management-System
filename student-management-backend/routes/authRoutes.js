@@ -182,7 +182,14 @@ router.post("/reset-password", async (req, res) => {
         message: "User not found",
       });
     }
+    const isSamePassword = await bcrypt.compare(password, user.password);
 
+    if (isSamePassword) {
+      return res.status(400).json({
+        success: false,
+        message: "New password cannot be the same as your current password.",
+      });
+    }
     // Hash new password
     const hashedPassword = await bcrypt.hash(password, 10);
 
