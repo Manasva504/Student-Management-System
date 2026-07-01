@@ -90,30 +90,9 @@ function AppContent() {
             </ProtectedRoute>
           }
         />
-        <Route
-          path="/forgot-password"
-          element={
-            <ProtectedRoute>
-              <ForgotPassword />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/verify-otp"
-          element={
-            <ProtectedRoute>
-              <VerifyOtp />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/reset-password"
-          element={
-            <ProtectedRoute>
-              <ResetPassword />
-            </ProtectedRoute>
-          }
-        />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/verify-otp" element={<VerifyOtp />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         {/* Catch-all: redirect unknown routes to login */}
         <Route path="*" element={<Navigate to="/login" />} />
       </Routes>
