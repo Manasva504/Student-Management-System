@@ -10,7 +10,7 @@ function ResetPassword() {
 
   const handleResetPassword = async () => {
     try {
-      const response = await fetch(`${API_URL}/reset-password`, ... {
+      const response = await fetch(`${API_URL}/reset-password`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -23,13 +23,27 @@ function ResetPassword() {
 
       const data = await response.json();
 
+      console.log("Status:", response.status);
+      console.log("Response:", data);
+
+      if (!response.ok) {
+        alert(data.message);
+        return;
+      }
+
       alert(data.message);
 
       localStorage.removeItem("resetEmail");
 
       navigate("/login");
     } catch (error) {
-      alert("Something went wrong");
+      console.log(error);
+
+      if (error.response) {
+        console.log(error.response.data);
+      }
+
+      alert(error.message);
     }
   };
 
