@@ -7,7 +7,7 @@ const connectDB = require("./config/db");
 const authRoutes = require("./routes/authRoutes");
 const authMiddleware = require("./middleware/authMiddleware");
 const mongoose = require("mongoose");
-const adminOnly = require("./middleware/roleMiddleware");
+const adminOnly = require("./middleware/rolemiddleware");
 const multer = require("multer");
 const path = require("path");
 
