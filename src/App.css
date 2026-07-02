@@ -834,7 +834,9 @@ input[type="number"] {
 .auth-card--enhanced::before {
   content: "";
   position: absolute;
-  top: 0; left: 0; right: 0;
+  top: 0;
+  left: 0;
+  right: 0;
   height: 4px;
   background: var(--primary-gradient);
 }
@@ -1002,7 +1004,7 @@ input[type="number"] {
 .auth-spinner {
   width: 16px;
   height: 16px;
-  border: 2.5px solid rgba(255,255,255,0.35);
+  border: 2.5px solid rgba(255, 255, 255, 0.35);
   border-top-color: white;
   border-radius: 50%;
   animation: auth-spin 0.7s linear infinite;
@@ -1010,7 +1012,9 @@ input[type="number"] {
 }
 
 @keyframes auth-spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Back link below card */
@@ -1087,4 +1091,19 @@ input[type="number"] {
   .auth-card--enhanced {
     padding: 36px 24px 28px;
   }
+}
+
+.error-text {
+  color: #ff4d4f;
+  font-size: 14px;
+  margin-top: 8px;
+  margin-bottom: 10px;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.delete-btn {
+  margin-top: 15px;
 }

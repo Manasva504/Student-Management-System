@@ -16,6 +16,19 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+
+  role: {
+    type: String,
+    enum: ["Admin", "Student"],
+    default: "Student",
+  },
+
+  profilePic: {
+    type: String,
+    default: "",
+  },
+
+  
   resetOtp: {
     type: String,
   },

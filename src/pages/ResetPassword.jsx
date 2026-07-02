@@ -6,9 +6,10 @@ function ResetPassword() {
   const navigate = useNavigate();
   const [email, setEmail] = useState(localStorage.getItem("resetEmail") || "");
   const [password, setPassword] = useState("");
-  const API_URL =
-    "https://student-management-system-zk2b.onrender.com/api/auth";
+  //   const API_URL =
+  // "http://localhost:5000/api/auth";
 
+  const API_URL = "http://localhost:5000/api/auth";
   const handleResetPassword = async () => {
     try {
       const response = await fetch(`${API_URL}/reset-password`, {
@@ -36,7 +37,6 @@ function ResetPassword() {
         toast.success(data.message || "Password reset successful");
 
         localStorage.removeItem("resetEmail");
-
       } else {
         toast.error(data.message || "Failed to reset password");
       }

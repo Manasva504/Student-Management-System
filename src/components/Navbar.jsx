@@ -1,9 +1,11 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import "../App.css";
-import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 
 function Navbar() {
+  const token = localStorage.getItem("token");
+  const user = token ? JSON.parse(atob(token.split(".")[1])) : null;
+
   const navigate = useNavigate();
 
   function handleLogout() {
@@ -13,6 +15,7 @@ function Navbar() {
 
     navigate("/login");
   }
+
   return (
     <div className="navibar">
       <nav>
@@ -23,20 +26,33 @@ function Navbar() {
             <Link to="/">Dashboard</Link>
           </li>
 
-          <li>
-            <Link to="/add-student">Add Student</Link>
-          </li>
+          {user?.role === "Admin" && (
+            <li>
+              <Link to="/add-student">Add Student</Link>
+            </li>
+          )}
 
           <li>
             <Link to="/students">Student List</Link>
           </li>
+
+          {user?.role === "Admin" && (
+            <li>
+              <Link to="/manage-branches">Manage Branches</Link>
+            </li>
+          )}
+
+          <li>
+            <Link to="/profile">Profile</Link>
+          </li>
+
           <li>
             <button onClick={handleLogout} className="logout-btn">
               Logout
             </button>
           </li>
           <li>
-            <Link to="/manage-branches">Manage Branches</Link>
+            <Link to="/change-password">Change Password</Link>
           </li>
         </ul>
       </nav>

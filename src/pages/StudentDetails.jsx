@@ -40,7 +40,7 @@ function StudentDetails() {
 
         {student.profilePic && (
           <img
-            src={`https://student-management-system-zk2b.onrender.com${student.profilePic}`}
+            src={`http://localhost:5000${student.profilePic}`}
             alt={student.name}
             className="profile-image"
           />

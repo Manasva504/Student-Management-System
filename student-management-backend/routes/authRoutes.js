@@ -4,6 +4,7 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const sendEmail = require("../utils/sendEmail");
 const router = express.Router();
+const authMiddleware = require("../middleware/authMiddleware");
 
 router.post("/login", async (req, res) => {
   try {
@@ -31,11 +32,18 @@ router.post("/login", async (req, res) => {
         message: "Invalid Credentials",
       });
     }
-
+    console.log("USER FROM DB:");
     //generate JWT Tokens
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-      expiresIn: "1d",
-    });
+    const token = jwt.sign(
+      {
+        id: user._id,
+        role: user.role,
+      },
+      process.env.JWT_SECRET,
+      {
+        expiresIn: "1d",
+      },
+    );
 
     res.status(200).json({
       message: "Login successful",
@@ -79,9 +87,15 @@ router.post("/register", async (req, res) => {
       name,
       email,
       password: hashedPassword,
+      role: "Student",
     });
 
+
     await user.save();
+
+    const savedUser = await User.findById(user._id);
+
+    console.log("Saved user:", await User.findOne({ email }));
 
     res.status(201).json({
       message: "User registered successfully",
@@ -216,4 +230,123 @@ router.post("/reset-password", async (req, res) => {
   }
 });
 
+router.get("/profile", authMiddleware, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select("-password");
+
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found",
+      });
+    }
+    console.log(user);
+
+    res.json(user);
+  } catch (error) {
+    console.log(error);
+
+    res.status(500).json({
+      message: "Server Error",
+    });
+  }
+});
+
+router.put("/profile", authMiddleware, async (req, res) => {
+  try {
+    const { name, email, profilePic } = req.body;
+
+    const user = await User.findById(req.user.id);
+
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found",
+      });
+    }
+
+    user.name = name || user.name;
+    user.email = email || user.email;
+    user.profilePic = profilePic || user.profilePic;
+
+    await user.save();
+
+    res.json({
+      message: "Profile updated successfully",
+      user,
+    });
+  } catch (error) {
+    console.log(error);
+
+    res.status(500).json({
+      message: "Server Error",
+    });
+  }
+});
+
+router.put("/change-password", authMiddleware, async (req, res) => {
+  try {
+    const { oldPassword, newPassword } = req.body;
+
+    if (!oldPassword || !newPassword) {
+      return res.status(400).json({
+        message: "Both passwords are required",
+      });
+    }
+
+    const user = await User.findById(req.user.id);
+
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found",
+      });
+    }
+
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
+
+    if (!isMatch) {
+      return res.status(400).json({
+        message: "Current password is incorrect",
+      });
+    }
+
+    const samePassword = await bcrypt.compare(newPassword, user.password);
+
+    if (samePassword) {
+      return res.status(400).json({
+        message: "New password cannot be same as old password",
+      });
+    }
+
+    user.password = await bcrypt.hash(newPassword, 10);
+
+    await user.save();
+
+    res.json({
+      success: true,
+      message: "Password updated successfully",
+    });
+  } catch (error) {
+    console.log(error);
+
+    res.status(500).json({
+      message: "Server Error",
+    });
+  }
+});
+
+router.delete("/delete-account", authMiddleware, async (req, res) => {
+  try {
+    await User.findByIdAndDelete(req.user.id);
+
+    res.json({
+      success: true,
+      message: "Account deleted successfully",
+    });
+  } catch (error) {
+    console.log(error);
+
+    res.status(500).json({
+      message: "Server Error",
+    });
+  }
+});
 module.exports = router;

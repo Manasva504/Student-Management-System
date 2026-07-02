@@ -19,6 +19,8 @@ import { Toaster } from "react-hot-toast";
 import ForgotPassword from "./pages/ForgotPassword";
 import VerifyOtp from "./pages/VerifyOtp";
 import ResetPassword from "./pages/ResetPassword";
+import Profile from "./pages/Profile";
+import ChangePassword from "./pages/ChangePassword";
 
 function ProtectedRoute({ children }) {
   const token = localStorage.getItem("token");
@@ -51,7 +53,7 @@ function AppContent() {
         <Route
           path="/add-student"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute role="Admin">
               <AddStudent />
             </ProtectedRoute>
           }
@@ -72,24 +74,42 @@ function AppContent() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/edit-student/:id"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute role="Admin">
               <EditStudent />
             </ProtectedRoute>
           }
         />
 
-        {/* FIX: ManageBranches was missing ProtectedRoute */}
         <Route
           path="/manage-branches"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute role="Admin">
               <ManageBranches />
             </ProtectedRoute>
           }
         />
+
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <Profile />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/change-password"
+          element={
+            <ProtectedRoute>
+              <ChangePassword />
+            </ProtectedRoute>
+          }
+        />
+
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/verify-otp" element={<VerifyOtp />} />
         <Route path="/reset-password" element={<ResetPassword />} />

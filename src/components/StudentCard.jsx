@@ -6,6 +6,9 @@ import { deleteStudent as deleteStudentAPI } from "../services/studentService";
 import toast from "react-hot-toast";
 
 function StudentCard({ student }) {
+  const token = localStorage.getItem("token");
+
+  const user = token ? JSON.parse(atob(token.split(".")[1])) : null;
   const { fetchStudents } = useContext(StudentContext);
   async function deleteStudent() {
     const confirmDelete = window.confirm(
@@ -34,7 +37,7 @@ function StudentCard({ student }) {
         <img
           src={
             student.profilePic
-              ? `https://student-management-system-zk2b.onrender.com${student.profilePic}`
+              ? `http://localhost:5000${student.profilePic}`
               : "/default-avatar.png"
           }
           className="profile-image"
@@ -54,12 +57,19 @@ function StudentCard({ student }) {
       <Link to={`/students/${student.id}`}>
         <button className="primary-btn">View Details</button>
       </Link>
-      <button className="delete-btn" onClick={deleteStudent}>
-        Delete
-      </button>
-      <Link to={`/edit-student/${student.id}`}>
-        <button className="primary-btn">Edit</button>
-      </Link>
+      {user?.role === "Admin" && (
+        <>
+          <Link to={`/edit-student/${student.id}`}>
+            <button className="primary-btn">Edit</button>
+          </Link>
+          <button className="delete-btn" onClick={deleteStudent}>
+            Delete
+          </button>
+          <Link to={`/edit-student/${student.id}`}>
+            <button className="primary-btn">Edit</button>
+          </Link>
+        </>
+      )}
     </div>
   );
 }

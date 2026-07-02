@@ -7,7 +7,7 @@ const connectDB = require("./config/db");
 const authRoutes = require("./routes/authRoutes");
 const authMiddleware = require("./middleware/authMiddleware");
 const mongoose = require("mongoose");
-
+const adminOnly = require("./middleware/roleMiddleware");
 const multer = require("multer");
 const path = require("path");
 
@@ -28,7 +28,15 @@ const studentSchema = new mongoose.Schema({
 const Student = mongoose.model("Student", studentSchema);
 
 // ── Middlewares ──────────────────────────────────────────────
-app.use(cors());
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5173",
+      "https://student-management-system-806fff9s7-manasva-s-projects.vercel.app",
+    ],
+    credentials: true,
+  }),
+);
 app.use(express.json());
 
 app.use((req, res, next) => {
@@ -169,7 +177,7 @@ app.get("/students/:id", authMiddleware, async (req, res) => {
 });
 
 // POST add student
-app.post("/students", authMiddleware, async (req, res) => {
+app.post("/students", authMiddleware, adminOnly, async (req, res) => {
   try {
     const { name, email, course, age, cgpa, profilePic } = req.body;
 
@@ -210,7 +218,7 @@ app.post("/students", authMiddleware, async (req, res) => {
 });
 
 // PUT update student
-app.put("/students/:id", authMiddleware, async (req, res) => {
+app.put("/students/:id", authMiddleware, adminOnly, async (req, res) => {
   try {
     const { name, email, course, age, cgpa, profilePic } = req.body;
 
@@ -247,7 +255,7 @@ app.put("/students/:id", authMiddleware, async (req, res) => {
 });
 
 // DELETE student
-app.delete("/students/:id", authMiddleware, async (req, res) => {
+app.delete("/students/:id", authMiddleware, adminOnly, async (req, res) => {
   try {
     const deleted = await Student.findByIdAndDelete(req.params.id);
 

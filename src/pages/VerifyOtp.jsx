@@ -6,9 +6,10 @@ function VerifyOtp() {
   const navigate = useNavigate();
   const [email, setEmail] = useState(localStorage.getItem("resetEmail") || "");
   const [otp, setOtp] = useState("");
-  const API_URL =
-    "https://student-management-system-zk2b.onrender.com/api/auth";
+  //   const API_URL =
+  // "http://localhost:5000/api/auth";
 
+  const API_URL = "http://localhost:5000/api/auth";
   const handleVerifyOtp = async () => {
     try {
       const response = await fetch(`${API_URL}/verify-otp`, {

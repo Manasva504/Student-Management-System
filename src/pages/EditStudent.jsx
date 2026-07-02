@@ -146,7 +146,7 @@ function EditStudent() {
 
         {oldProfilePic && (
           <img
-            src={`https://student-management-system-zk2b.onrender.com${oldProfilePic}`}
+            src={`http://localhost:5000${oldProfilePic}`}
             alt="Student"
             className="profile-image"
           />
