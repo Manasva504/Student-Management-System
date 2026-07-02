@@ -28,12 +28,25 @@ const studentSchema = new mongoose.Schema({
 const Student = mongoose.model("Student", studentSchema);
 
 // ── Middlewares ──────────────────────────────────────────────
+const allowedOrigins = [
+  "http://localhost:5173",
+  /^https:\/\/student-management-system.*\.vercel\.app$/,
+];
+
 app.use(
   cors({
-    origin: [
-      "http://localhost:5173",
-      "https://student-management-system-806fff9s7-manasva-s-projects.vercel.app",
-    ],
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      const isAllowed = allowedOrigins.some((o) =>
+        o instanceof RegExp ? o.test(origin) : o === origin
+      );
+      if (isAllowed) {
+        callback(null, true);
+      } else {
+        console.log("CORS blocked origin:", origin);
+        callback(new Error("CORS: origin not allowed"));
+      }
+    },
     credentials: true,
   }),
 );

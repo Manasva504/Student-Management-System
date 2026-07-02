@@ -111,7 +111,7 @@ function Profile() {
         />
         {profilePic && (
           <img
-            src={`http://localhost:5000${profilePic}`}
+            src={`https://student-management-system-zk2b.onrender.com${profilePic}`}
             alt="Profile"
             className="profile-image"
           />
