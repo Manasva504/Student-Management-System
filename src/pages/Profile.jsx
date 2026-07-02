@@ -8,6 +8,11 @@ import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import toast from "react-hot-toast";
 
+const BASE_URL =
+  import.meta.env.MODE === "development"
+    ? "http://localhost:5000"
+    : "https://student-management-system-zk2b.onrender.com";
+
 function Profile() {
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
@@ -111,7 +116,7 @@ function Profile() {
         />
         {profilePic && (
           <img
-            src={`http://localhost:5000${profilePic}`}
+            src={`${BASE_URL}${profilePic}`}
             alt="Profile"
             className="profile-image"
           />
@@ -122,12 +127,13 @@ function Profile() {
         />
         <button onClick={handleUpdateProfile}>Update Profile</button>{" "}
         <button
-        type="button"
-        className="delete-btn"
-        onClick={handleDeleteAccount}
-      >
-        Delete Account
-      </button>;
+          type="button"
+          className="delete-btn"
+          onClick={handleDeleteAccount}
+        >
+          Delete Account
+        </button>
+        ;
       </div>
     </div>
   );
