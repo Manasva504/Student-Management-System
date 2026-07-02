@@ -111,7 +111,7 @@ function Profile() {
         />
         {profilePic && (
           <img
-            src={`https://student-management-system-zk2b.onrender.com${profilePic}`}
+            src={`http://localhost:5000${profilePic}`}
             alt="Profile"
             className="profile-image"
           />
@@ -122,13 +122,12 @@ function Profile() {
         />
         <button onClick={handleUpdateProfile}>Update Profile</button>{" "}
         <button
-          type="button"
-          className="delete-btn"
-          onClick={handleDeleteAccount}
-        >
-          Delete Account
-        </button>
-        ;
+        type="button"
+        className="delete-btn"
+        onClick={handleDeleteAccount}
+      >
+        Delete Account
+      </button>;
       </div>
     </div>
   );
