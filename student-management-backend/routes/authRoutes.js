@@ -3,6 +3,7 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const sendEmail = require("../utils/sendEmail");
+const sendNotificationEmail = require("../utils/sendNotificationEmail");
 const router = express.Router();
 const authMiddleware = require("../middleware/authMiddleware");
 const adminOnly = require("../middleware/rolemiddleware");
@@ -98,6 +99,14 @@ router.post("/register", async (req, res) => {
     });
 
     await user.save();
+
+    // Fire-and-forget — same principle as the audit logging in server.js:
+    // a flaky email must never turn a successful registration into an error.
+    sendNotificationEmail(
+      user.email,
+      "Welcome to Student Management System",
+      `Hi ${user.name},\n\nYour account has been created successfully. You can now log in and get started.`,
+    ).catch((err) => console.error("Welcome email failed:", err.message));
 
     res.status(201).json({
       message: "User registered successfully",

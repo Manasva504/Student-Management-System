@@ -1,9 +1,19 @@
 import { useState, useEffect } from "react";
 import StudentCard from "../components/StudentCard";
-import { getStudents } from "../services/studentService";
+import {
+  getStudents,
+  exportStudentsExcel,
+  exportStudentsCSV,
+  exportStudentsPDF,
+} from "../services/studentService";
 import "../App.css";
+import { SearchX } from "lucide-react";
+import toast from "react-hot-toast";
 
 function StudentList() {
+  const token = localStorage.getItem("token");
+  const user = token ? JSON.parse(atob(token.split(".")[1])) : null;
+
   const [students, setStudents] = useState([]);
   const [branchFilter, setBranchFilter] = useState("All");
   const [sortOrder, setSortOrder] = useState("default");
@@ -53,6 +63,32 @@ function StudentList() {
   } else if (sortOrder === "cgpa-low") {
     sortedStudents.sort((a, b) => a.cgpa - b.cgpa);
   }
+
+  // Same filters currently applied to the list, so exports match what's on
+  // screen rather than always dumping every student.
+  const currentFilters = {
+    search: search || undefined,
+    branch: branchFilter !== "All" ? branchFilter : undefined,
+    minCgpa: minCgpa || undefined,
+    maxCgpa: maxCgpa || undefined,
+  };
+
+  const handleExport = async (format) => {
+    const exporters = {
+      excel: exportStudentsExcel,
+      csv: exportStudentsCSV,
+      pdf: exportStudentsPDF,
+    };
+
+    try {
+      await exporters[format](currentFilters);
+      toast.success(`Exported students as ${format.toUpperCase()}`);
+    } catch (error) {
+      console.log(error);
+      toast.error(`Failed to export ${format.toUpperCase()}`);
+    }
+  };
+
   return (
     <div className="student-list-container">
       <h1>Student List</h1>
@@ -108,13 +144,26 @@ function StudentList() {
         </select>
       </div>
 
+      {user?.role === "Admin" && (
+        <div className="filter-controls">
+          <button className="primary-btn" onClick={() => handleExport("excel")}>
+            Export Excel
+          </button>
+          <button className="primary-btn" onClick={() => handleExport("csv")}>
+            Export CSV
+          </button>
+          <button className="primary-btn" onClick={() => handleExport("pdf")}>
+            Export PDF
+          </button>
+        </div>
+      )}
+
       <div className="student-grid">
         {sortedStudents.length === 0 ? (
-          <p
-            style={{ color: "white", textAlign: "center", gridColumn: "1/-1" }}
-          >
-            No students found.
-          </p>
+          <div className="empty-state">
+            <SearchX size={20} />
+            <p>No students found.</p>
+          </div>
         ) : (
           sortedStudents.map((student) => (
             <StudentCard key={student.id} student={student} />

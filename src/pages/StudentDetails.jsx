@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { getStudentById } from "../services/studentService";
+import { getStudentById, sendStudentNotification } from "../services/studentService";
 import "../App.css";
+import toast from "react-hot-toast";
 
 // FIX: was hardcoded to localhost, so profile pictures 404'd in production.
 const BASE_URL =
@@ -13,6 +14,9 @@ function StudentDetails() {
   const { id } = useParams();
   const [student, setStudent] = useState(null);
 
+  const token = localStorage.getItem("token");
+  const user = token ? JSON.parse(atob(token.split(".")[1])) : null;
+
   useEffect(() => {
     fetchStudent();
   }, []);
@@ -23,6 +27,18 @@ function StudentDetails() {
       setStudent(response.data);
     } catch (error) {
       console.log(error);
+    }
+  };
+
+  const handleSendEmail = async () => {
+    try {
+      await sendStudentNotification(id);
+      toast.success("Notification email sent");
+    } catch (error) {
+      console.log(error);
+      toast.error(
+        error.response?.data?.message || "Failed to send notification email",
+      );
     }
   };
 
@@ -71,6 +87,12 @@ function StudentDetails() {
           <strong>CGPA: </strong>
           {student.cgpa}
         </p>
+
+        {user?.role === "Admin" && (
+          <button className="primary-btn" onClick={handleSendEmail}>
+            Send Email
+          </button>
+        )}
       </div>
     </div>
   );

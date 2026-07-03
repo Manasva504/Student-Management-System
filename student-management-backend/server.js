@@ -11,6 +11,10 @@ const adminOnly = require("./middleware/rolemiddleware");
 const multer = require("multer");
 const path = require("path");
 const Auditlog = require("./models/Auditlog");
+const xlsx = require("xlsx");
+const PDFDocument = require("pdfkit");
+const cron = require("node-cron");
+const sendNotificationEmail = require("./utils/sendNotificationEmail");
 
 const app = express();
 
@@ -89,43 +93,44 @@ app.get("/", (req, res) => {
   res.send("Backend Running");
 });
 
+// Shared by GET /students and the /students/export/* routes below, so the
+// same search/branch/cgpa filters apply whether the request is paginated
+// or exporting every matching row.
+function buildStudentQuery({ search, branch, minCgpa, maxCgpa }) {
+  let query = {};
+
+  // SEARCH
+  if (search) {
+    query.$or = [
+      { name: { $regex: search, $options: "i" } },
+      { email: { $regex: search, $options: "i" } },
+      { _id: mongoose.Types.ObjectId.isValid(search) ? search : null },
+    ];
+  }
+
+  // FILTER BY BRANCH
+  if (branch) {
+    query.course = branch;
+  }
+
+  // FILTER BY CGPA RANGE
+  if (minCgpa || maxCgpa) {
+    query.cgpa = {};
+
+    if (minCgpa) query.cgpa.$gte = Number(minCgpa);
+
+    if (maxCgpa) query.cgpa.$lte = Number(maxCgpa);
+  }
+
+  return query;
+}
+
 // GET all students with search, filter, sort and pagination
 app.get("/students", authMiddleware, async (req, res) => {
   try {
-    const {
-      search,
-      branch,
-      minCgpa,
-      maxCgpa,
-      sortBy,
-      page = 1,
-      limit = 5,
-    } = req.query;
+    const { sortBy, page = 1, limit = 5 } = req.query;
 
-    let query = {};
-
-    // SEARCH
-    if (search) {
-      query.$or = [
-        { name: { $regex: search, $options: "i" } },
-        { email: { $regex: search, $options: "i" } },
-        { _id: mongoose.Types.ObjectId.isValid(search) ? search : null },
-      ];
-    }
-
-    // FILTER BY BRANCH
-    if (branch) {
-      query.course = branch;
-    }
-
-    // FILTER BY CGPA RANGE
-    if (minCgpa || maxCgpa) {
-      query.cgpa = {};
-
-      if (minCgpa) query.cgpa.$gte = Number(minCgpa);
-
-      if (maxCgpa) query.cgpa.$lte = Number(maxCgpa);
-    }
+    let query = buildStudentQuery(req.query);
 
     // SORTING
     let sortOptions = {};
@@ -230,6 +235,14 @@ app.post("/students", authMiddleware, adminOnly, async (req, res) => {
       action: `Added student: ${newStudent.name}`,
     });
 
+    // Fire-and-forget: never let a flaky email hold up the response or
+    // fail an otherwise-successful add, same principle as audit logging.
+    sendNotificationEmail(
+      newStudent.email,
+      "Welcome to Student Management System",
+      `Hi ${newStudent.name},\n\nYour student record has been added to the Student Management System.\n\nCourse: ${newStudent.course}\nCGPA: ${newStudent.cgpa}\n\nIf you have any questions, contact your administrator.`,
+    ).catch((err) => console.error("Notification email failed:", err.message));
+
     res.status(201).json({
       message: "Student added successfully",
       student: { id: newStudent._id, ...newStudent._doc },
@@ -272,6 +285,12 @@ app.put("/students/:id", authMiddleware, adminOnly, async (req, res) => {
       action: `Edited student: ${updated.name}`,
     });
 
+    sendNotificationEmail(
+      updated.email,
+      "Your Student Record Was Updated",
+      `Hi ${updated.name},\n\nYour student record in the Student Management System has been updated.\n\nCourse: ${updated.course}\nCGPA: ${updated.cgpa}\n\nIf you didn't expect this change, contact your administrator.`,
+    ).catch((err) => console.error("Notification email failed:", err.message));
+
     res.json({
       message: "Student updated successfully",
       student: { id: updated._id, ...updated._doc },
@@ -311,6 +330,186 @@ app.delete("/students/:id", authMiddleware, adminOnly, async (req, res) => {
       message: "Server Error",
       data: null,
     });
+  }
+});
+
+// POST manually trigger a notification email for one student — unlike the
+// fire-and-forget emails on add/edit above, this one is a direct user
+// action, so it awaits the send and reports success/failure honestly.
+app.post("/students/:id/notify", authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const student = await Student.findById(req.params.id);
+
+    if (!student) {
+      return res.status(404).json({ success: false, message: "Student not found" });
+    }
+
+    await sendNotificationEmail(
+      student.email,
+      "Update from Student Management System",
+      `Hi ${student.name},\n\nThis is a notification regarding your student record.\n\nCourse: ${student.course}\nCGPA: ${student.cgpa}`,
+    );
+
+    res.json({ success: true, message: "Notification email sent" });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to send notification email",
+    });
+  }
+});
+
+// Row shape shared by all three export formats below.
+function formatStudentForExport(s) {
+  return {
+    Name: s.name,
+    Email: s.email,
+    Course: s.course,
+    Age: s.age,
+    CGPA: s.cgpa,
+    "Registration Date": s.createdAt
+      ? s.createdAt.toISOString().slice(0, 10)
+      : "",
+  };
+}
+
+// GET export all matching students as an Excel workbook (no pagination —
+// exports are meant to cover everything the filters match, not one page).
+app.get(
+  "/students/export/excel",
+  authMiddleware,
+  adminOnly,
+  async (req, res) => {
+    try {
+      const query = buildStudentQuery(req.query);
+      const students = await Student.find(query).sort({ name: 1 });
+
+      const rows = students.map(formatStudentForExport);
+
+      const worksheet = xlsx.utils.json_to_sheet(rows);
+      const workbook = xlsx.utils.book_new();
+      xlsx.utils.book_append_sheet(workbook, worksheet, "Students");
+
+      const buffer = xlsx.write(workbook, { type: "buffer", bookType: "xlsx" });
+
+      res.setHeader(
+        "Content-Type",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      );
+      res.setHeader("Content-Disposition", "attachment; filename=students.xlsx");
+      res.send(buffer);
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({ success: false, message: "Server Error" });
+    }
+  },
+);
+
+// Quotes a CSV field only when it needs it (contains a comma, quote, or
+// newline), doubling any internal quotes per the CSV spec.
+function csvEscape(value) {
+  const str = String(value ?? "");
+
+  if (/[",\n]/.test(str)) {
+    return `"${str.replace(/"/g, '""')}"`;
+  }
+
+  return str;
+}
+
+// GET export all matching students as CSV.
+app.get("/students/export/csv", authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const query = buildStudentQuery(req.query);
+    const students = await Student.find(query).sort({ name: 1 });
+
+    const header = ["Name", "Email", "Course", "Age", "CGPA", "Registration Date"];
+    const lines = [header.join(",")];
+
+    students.forEach((s) => {
+      const row = Object.values(formatStudentForExport(s)).map(csvEscape);
+      lines.push(row.join(","));
+    });
+
+    const csv = lines.join("\r\n");
+
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader("Content-Disposition", "attachment; filename=students.csv");
+    res.send(csv);
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ success: false, message: "Server Error" });
+  }
+});
+
+// GET export all matching students as a PDF table — this doubles as the
+// "Student Report" from the assignment, not a separate report mechanism.
+app.get("/students/export/pdf", authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const query = buildStudentQuery(req.query);
+    const students = await Student.find(query).sort({ name: 1 });
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", "attachment; filename=students.pdf");
+
+    const doc = new PDFDocument({ margin: 40, size: "A4", layout: "landscape" });
+    doc.pipe(res);
+
+    doc.fontSize(16).text("Student Report", { align: "center" });
+    doc.moveDown();
+
+    const columns = [
+      { label: "Name", width: 150 },
+      { label: "Email", width: 210 },
+      { label: "Course", width: 140 },
+      { label: "Age", width: 50 },
+      { label: "CGPA", width: 60 },
+      { label: "Registration Date", width: 130 },
+    ];
+    const tableWidth = columns.reduce((sum, c) => sum + c.width, 0);
+    const startX = doc.page.margins.left;
+    let y = doc.y;
+
+    function drawRow(values, isHeader) {
+      let x = startX;
+
+      doc.fontSize(10).font(isHeader ? "Helvetica-Bold" : "Helvetica");
+
+      values.forEach((value, i) => {
+        doc.text(String(value), x, y, { width: columns[i].width, ellipsis: true });
+        x += columns[i].width;
+      });
+
+      y += 20;
+
+      if (y > doc.page.height - doc.page.margins.bottom) {
+        doc.addPage();
+        y = doc.page.margins.top;
+      }
+    }
+
+    drawRow(
+      columns.map((c) => c.label),
+      true,
+    );
+    doc
+      .moveTo(startX, y - 6)
+      .lineTo(startX + tableWidth, y - 6)
+      .stroke();
+
+    students.forEach((s) => {
+      drawRow(Object.values(formatStudentForExport(s)), false);
+    });
+
+    doc.end();
+  } catch (error) {
+    console.log(error);
+    // The PDF may already be streaming by the time an error hits, in which
+    // case headers are sent and a JSON error body would just crash again.
+    if (!res.headersSent) {
+      res.status(500).json({ success: false, message: "Server Error" });
+    }
   }
 });
 
@@ -430,6 +629,37 @@ app.get("/dashboard/registration-trend", authMiddleware, async (req, res) => {
       success: false,
       message: "Server Error",
     });
+  }
+});
+
+// ── Scheduled Job ────────────────────────────────────────────
+// Counts total students and logs a one-line summary. Also exposed as a POST
+// route below so it can be run on demand — Render's free tier can sleep
+// straight through the scheduled time, so the route is how this gets
+// demonstrated rather than waited on.
+async function logDailySummary() {
+  const totalStudents = await Student.countDocuments();
+
+  console.log(`[Daily Summary] Total students: ${totalStudents}`);
+
+  return totalStudents;
+}
+
+// Runs once a day at midnight server time.
+cron.schedule("0 0 * * *", () => {
+  logDailySummary().catch((err) =>
+    console.error("Daily summary cron failed:", err.message),
+  );
+});
+
+app.post("/admin/daily-summary", authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const totalStudents = await logDailySummary();
+
+    res.json({ success: true, totalStudents });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ success: false, message: "Server Error" });
   }
 });
 

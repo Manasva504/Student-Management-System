@@ -111,3 +111,54 @@ export const uploadProfilePic = (formData) => {
     },
   });
 };
+
+// Fetches an export as a blob, then hands the browser a temporary link to
+// trigger the "Save As" download — the same trick for all three formats,
+// just a different URL/filename per call.
+async function downloadExport(url, filters, filename) {
+  const token = localStorage.getItem("token");
+
+  const response = await axios.get(url, {
+    params: filters,
+    responseType: "blob",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const blobUrl = window.URL.createObjectURL(new Blob([response.data]));
+  const link = document.createElement("a");
+
+  link.href = blobUrl;
+  link.setAttribute("download", filename);
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+
+  window.URL.revokeObjectURL(blobUrl);
+}
+
+// filters: { search, branch, minCgpa, maxCgpa } — same shape StudentList.jsx
+// already tracks, so exports respect whatever's currently filtered.
+export const exportStudentsExcel = (filters = {}) =>
+  downloadExport(`${API_URL}/export/excel`, filters, "students.xlsx");
+
+export const exportStudentsCSV = (filters = {}) =>
+  downloadExport(`${API_URL}/export/csv`, filters, "students.csv");
+
+export const exportStudentsPDF = (filters = {}) =>
+  downloadExport(`${API_URL}/export/pdf`, filters, "students.pdf");
+
+export const sendStudentNotification = (id) => {
+  const token = localStorage.getItem("token");
+
+  return axios.post(
+    `${API_URL}/${id}/notify`,
+    {},
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  );
+};
