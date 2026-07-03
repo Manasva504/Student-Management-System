@@ -21,11 +21,8 @@ import VerifyOtp from "./pages/VerifyOtp";
 import ResetPassword from "./pages/ResetPassword";
 import Profile from "./pages/Profile";
 import ChangePassword from "./pages/ChangePassword";
-
-function ProtectedRoute({ children }) {
-  const token = localStorage.getItem("token");
-  return token ? children : <Navigate to="/login" />;
-}
+import ActivityHistory from "./pages/ActivityHistory";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 function AppContent() {
   const location = useLocation();
@@ -106,6 +103,20 @@ function AppContent() {
           element={
             <ProtectedRoute>
               <ChangePassword />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* FIX: this page shows every user's audit trail (logins, password
+            changes, student CRUD by anyone) and the Navbar link is only
+            shown to Admins — but the route itself wasn't actually gated, so
+            any logged-in user could reach it directly by URL. Now matches
+            the backend, which also requires Admin (see authRoutes.js). */}
+        <Route
+          path="/activity-history"
+          element={
+            <ProtectedRoute role="Admin">
+              <ActivityHistory />
             </ProtectedRoute>
           }
         />

@@ -5,6 +5,14 @@ import { Link } from "react-router-dom";
 import { deleteStudent as deleteStudentAPI } from "../services/studentService";
 import toast from "react-hot-toast";
 
+// FIX: profile picture URLs were hardcoded to localhost, so they'd 404 in
+// production (Vercel frontend, Render backend). Same fix applied in
+// EditStudent.jsx and StudentDetails.jsx.
+const BASE_URL =
+  import.meta.env.MODE === "development"
+    ? "http://localhost:5000"
+    : "https://student-management-system-zk2b.onrender.com";
+
 function StudentCard({ student }) {
   const token = localStorage.getItem("token");
 
@@ -27,17 +35,18 @@ function StudentCard({ student }) {
       toast.success("Student Deleted Successfully");
     } catch (error) {
       console.log(error);
-      toast.success("Failed to delete student");
+      // FIX: this was toast.success(...) — a failed delete was showing a
+      // success toast.
+      toast.error("Failed to delete student");
     }
   }
-  console.log(student.profilePic);
   return (
     <div className="student-card">
       {student.profilePic && (
         <img
           src={
             student.profilePic
-              ? `http://localhost:5000${student.profilePic}`
+              ? `${BASE_URL}${student.profilePic}`
               : "/default-avatar.png"
           }
           className="profile-image"
@@ -65,9 +74,6 @@ function StudentCard({ student }) {
           <button className="delete-btn" onClick={deleteStudent}>
             Delete
           </button>
-          <Link to={`/edit-student/${student.id}`}>
-            <button className="primary-btn">Edit</button>
-          </Link>
         </>
       )}
     </div>

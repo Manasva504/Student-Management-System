@@ -3,6 +3,12 @@ import { useParams } from "react-router-dom";
 import { getStudentById } from "../services/studentService";
 import "../App.css";
 
+// FIX: was hardcoded to localhost, so profile pictures 404'd in production.
+const BASE_URL =
+  import.meta.env.MODE === "development"
+    ? "http://localhost:5000"
+    : "https://student-management-system-zk2b.onrender.com";
+
 function StudentDetails() {
   const { id } = useParams();
   const [student, setStudent] = useState(null);
@@ -40,7 +46,7 @@ function StudentDetails() {
 
         {student.profilePic && (
           <img
-            src={`http://localhost:5000${student.profilePic}`}
+            src={`${BASE_URL}${student.profilePic}`}
             alt={student.name}
             className="profile-image"
           />

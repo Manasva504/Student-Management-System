@@ -7,6 +7,7 @@ import { deleteAccount } from "../services/authServices";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import toast from "react-hot-toast";
+import { logoutUser } from "../services/authServices";
 
 const BASE_URL =
   import.meta.env.MODE === "development"
@@ -46,14 +47,27 @@ function Profile() {
       await deleteAccount();
 
       toast.success("Account deleted successfully");
-
-      localStorage.removeItem("token");
-
-      navigate("/login");
     } catch (error) {
       console.log(error);
       toast.error("Failed to delete account");
+      return;
     }
+
+    // FIX: logging out is best-effort cleanup after a successful delete —
+    // this used to be inside the same try block as deleteAccount(), so if
+    // this call failed (cold start, network blip, etc.) the catch below
+    // would report "Failed to delete account" even though the account had
+    // already been deleted. Isolating it means a logout hiccup can no
+    // longer misreport a successful deletion as a failure.
+    try {
+      await logoutUser();
+    } catch (error) {
+      console.log(error);
+    }
+
+    localStorage.removeItem("token");
+
+    navigate("/login");
   }
   async function handleUpdateProfile() {
     try {
@@ -133,7 +147,6 @@ function Profile() {
         >
           Delete Account
         </button>
-        ;
       </div>
     </div>
   );

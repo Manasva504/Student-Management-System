@@ -5,6 +5,8 @@ const User = require("../models/User");
 const sendEmail = require("../utils/sendEmail");
 const router = express.Router();
 const authMiddleware = require("../middleware/authMiddleware");
+const adminOnly = require("../middleware/rolemiddleware");
+const Auditlog = require("../models/Auditlog");
 
 router.post("/login", async (req, res) => {
   try {
@@ -32,11 +34,12 @@ router.post("/login", async (req, res) => {
         message: "Invalid Credentials",
       });
     }
-    console.log("USER FROM DB:");
+
     //generate JWT Tokens
     const token = jwt.sign(
       {
         id: user._id,
+        email: user.email,
         role: user.role,
       },
       process.env.JWT_SECRET,
@@ -45,6 +48,10 @@ router.post("/login", async (req, res) => {
       },
     );
 
+    await Auditlog.create({
+      user: user.email,
+      action: "Login",
+    });
     res.status(200).json({
       message: "Login successful",
       token,
@@ -90,12 +97,7 @@ router.post("/register", async (req, res) => {
       role: "Student",
     });
 
-
     await user.save();
-
-    const savedUser = await User.findById(user._id);
-
-    console.log("Saved user:", await User.findOne({ email }));
 
     res.status(201).json({
       message: "User registered successfully",
@@ -129,10 +131,11 @@ router.post("/forgot-password", async (req, res) => {
     user.resetOtpExpiry = Date.now() + 5 * 60 * 1000;
 
     await user.save();
-    console.log("EMAIL USER:", process.env.EMAIL_USER);
-    console.log("EMAIL PASS EXISTS:", !!process.env.EMAIL_PASS);
-    console.log("Sending OTP to:", email);
-    console.log("OTP:", otp);
+
+    // FIX: removed `console.log("OTP:", otp)` that used to be here — it was
+    // printing the live password-reset OTP straight into Render's log
+    // stream, which is a real leak (logs are visible to anyone with
+    // dashboard access and often persist/get shipped elsewhere).
     await sendEmail(
       email,
       "Password Reset OTP",
@@ -186,7 +189,7 @@ router.post("/verify-otp", async (req, res) => {
 
 router.post("/reset-password", async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, otp } = req.body;
 
     const user = await User.findOne({ email });
 
@@ -196,6 +199,19 @@ router.post("/reset-password", async (req, res) => {
         message: "User not found",
       });
     }
+
+    // FIX (security): this endpoint used to skip OTP verification entirely —
+    // anyone who knew a user's email could reset their password just by
+    // calling this route directly, without ever going through /verify-otp.
+    // It now re-checks the same resetOtp/resetOtpExpiry fields /verify-otp
+    // checks, so a valid, unexpired OTP is required here too.
+    if (!otp || user.resetOtp !== otp || user.resetOtpExpiry < Date.now()) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or expired OTP",
+      });
+    }
+
     const isSamePassword = await bcrypt.compare(password, user.password);
 
     if (isSamePassword) {
@@ -210,7 +226,7 @@ router.post("/reset-password", async (req, res) => {
     // Update password
     user.password = hashedPassword;
 
-    // Clear OTP fields
+    // Clear OTP fields so this same OTP can't be replayed
     user.resetOtp = undefined;
     user.resetOtpExpiry = undefined;
 
@@ -239,7 +255,6 @@ router.get("/profile", authMiddleware, async (req, res) => {
         message: "User not found",
       });
     }
-    console.log(user);
 
     res.json(user);
   } catch (error) {
@@ -320,6 +335,11 @@ router.put("/change-password", authMiddleware, async (req, res) => {
 
     await user.save();
 
+    await Auditlog.create({
+      user: user.email,
+      action: "Changed Password",
+    });
+
     res.json({
       success: true,
       message: "Password updated successfully",
@@ -349,4 +369,43 @@ router.delete("/delete-account", authMiddleware, async (req, res) => {
     });
   }
 });
+
+router.post("/logout", authMiddleware, async (req, res) => {
+  try {
+    await Auditlog.create({
+      user: req.user.email,
+      action: "Logout",
+    });
+
+    res.json({
+      success: true,
+      message: "Logged out successfully",
+    });
+  } catch (error) {
+    console.log(error);
+
+    res.status(500).json({
+      message: "Server Error",
+    });
+  }
+});
+
+router.get("/activity-logs", authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const logs = await Auditlog.find().sort({ createdAt: -1 }).limit(200);
+
+    res.json({
+      success: true,
+      logs,
+    });
+  } catch (error) {
+    console.log(error);
+
+    res.status(500).json({
+      success: false,
+      message: "Server Error",
+    });
+  }
+});
+
 module.exports = router;

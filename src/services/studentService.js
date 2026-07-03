@@ -1,7 +1,18 @@
 import axios from "axios";
 
-const API_URL = "https://student-management-system-zk2b.onrender.com/students";
-// const API_URL = "http://localhost:5000/api/auth";
+// FIX: dev uses the local backend, a real build uses Render — same pattern
+// as authServices.js now.
+const BASE_URL =
+  import.meta.env.MODE === "development"
+    ? "http://localhost:5000"
+    : "https://student-management-system-zk2b.onrender.com";
+
+// FIX: this used to be "${BASE_URL}/api/auth", which is wrong — server.js
+// mounts the student CRUD routes at the root ("/students", "/students/:id"),
+// not under /api/auth. Every call below (getStudents, addStudent, etc.) was
+// hitting a URL with no matching route on the backend.
+const API_URL = `${BASE_URL}/students`;
+
 export const getStudents = (
   search = "",
   page = 1,
@@ -60,30 +71,43 @@ export const deleteStudent = (id) => {
 export const getDashboardStats = () => {
   const token = localStorage.getItem("token");
 
-  // return axios.get(
-  //   "http://localhost:5000/dashboard/stats",
-  return axios.get(
-    "https://student-management-system-zk2b.onrender.com/dashboard/stats",
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+  return axios.get(`${BASE_URL}/dashboard/stats`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
     },
-  );
+  });
 };
+
+// Powers the "Students per Branch" + "Average CGPA by Branch" charts on the
+// Dashboard.
+export const getBranchChart = () => {
+  const token = localStorage.getItem("token");
+
+  return axios.get(`${BASE_URL}/dashboard/branch-chart`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+};
+
+// Powers the "Student Registration Trend" chart on the Dashboard.
+export const getRegistrationTrend = () => {
+  const token = localStorage.getItem("token");
+
+  return axios.get(`${BASE_URL}/dashboard/registration-trend`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+};
+
 export const uploadProfilePic = (formData) => {
   const token = localStorage.getItem("token");
 
-  // return axios.post(
-  //   "http://localhost:5000/upload",
-  return axios.post(
-    "https://student-management-system-zk2b.onrender.com/upload",
-    formData,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "multipart/form-data",
-      },
+  return axios.post(`${BASE_URL}/upload`, formData, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "multipart/form-data",
     },
-  );
+  });
 };

@@ -1,35 +1,30 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
+import { verifyOtp } from "../services/authServices";
 
 function VerifyOtp() {
   const navigate = useNavigate();
   const [email, setEmail] = useState(localStorage.getItem("resetEmail") || "");
   const [otp, setOtp] = useState("");
-  //   const API_URL =
-  // "http://localhost:5000/api/auth";
 
-  const API_URL = "http://localhost:5000/api/auth";
+  // FIX: this used to hit a hardcoded "http://localhost:5000/api/auth" via
+  // a raw fetch(), so OTP verification was broken on the deployed site no
+  // matter what. Now goes through authServices.js, which already knows how
+  // to pick localhost vs. Render.
   const handleVerifyOtp = async () => {
     try {
-      const response = await fetch(`${API_URL}/verify-otp`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, otp }),
-      });
+      const response = await verifyOtp(email, otp);
 
-      const data = await response.json();
+      toast.success(response.data.message || "OTP verified successfully");
 
-      if (response.ok) {
-        toast.success(data.message || "OTP verified successfully");
-        navigate("/reset-password");
-      } else {
-        toast.error(data.message || "Invalid OTP");
-      }
+      // Reset-password now re-validates this OTP server-side too, so it
+      // needs to travel along with us to that page.
+      localStorage.setItem("resetOtp", otp);
+
+      navigate("/reset-password");
     } catch (error) {
-      toast.error("Something went wrong");
+      toast.error(error.response?.data?.message || "Invalid OTP");
     }
   };
 
@@ -59,3 +54,4 @@ function VerifyOtp() {
 }
 
 export default VerifyOtp;
+  

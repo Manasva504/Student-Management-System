@@ -10,20 +10,30 @@ const mongoose = require("mongoose");
 const adminOnly = require("./middleware/rolemiddleware");
 const multer = require("multer");
 const path = require("path");
+const Auditlog = require("./models/Auditlog");
 
 const app = express();
 
 connectDB();
 
 // ── Student Schema (defined here, no separate file needed) ──
-const studentSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  email: { type: String, required: true },
-  course: { type: String, required: true },
-  age: { type: Number, required: true },
-  cgpa: { type: Number, required: true },
-  profilePic: { type: String, default: "" },
-});
+// NOTE: added { timestamps: true } so we get createdAt/updatedAt on every
+// student doc. This is required for the "Student Registration Trend" chart
+// below, which groups students by their createdAt date. Students that were
+// already in the DB before this change won't have a createdAt field, so
+// they simply won't show up in the trend chart until re-saved — see the
+// note on the /dashboard/registration-trend route.
+const studentSchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true },
+    email: { type: String, required: true },
+    course: { type: String, required: true },
+    age: { type: Number, required: true },
+    cgpa: { type: Number, required: true },
+    profilePic: { type: String, default: "" },
+  },
+  { timestamps: true },
+);
 
 const Student = mongoose.model("Student", studentSchema);
 
@@ -38,7 +48,7 @@ app.use(
     origin: (origin, callback) => {
       if (!origin) return callback(null, true);
       const isAllowed = allowedOrigins.some((o) =>
-        o instanceof RegExp ? o.test(origin) : o === origin
+        o instanceof RegExp ? o.test(origin) : o === origin,
       );
       if (isAllowed) {
         callback(null, true);
@@ -215,6 +225,10 @@ app.post("/students", authMiddleware, adminOnly, async (req, res) => {
       profilePic,
     });
     await newStudent.save();
+    await Auditlog.create({
+      user: req.user.email,
+      action: `Added student: ${newStudent.name}`,
+    });
 
     res.status(201).json({
       message: "Student added successfully",
@@ -253,6 +267,11 @@ app.put("/students/:id", authMiddleware, adminOnly, async (req, res) => {
       return res.status(404).json({ message: "Student not found" });
     }
 
+    await Auditlog.create({
+      user: req.user.email,
+      action: `Edited student: ${updated.name}`,
+    });
+
     res.json({
       message: "Student updated successfully",
       student: { id: updated._id, ...updated._doc },
@@ -275,6 +294,11 @@ app.delete("/students/:id", authMiddleware, adminOnly, async (req, res) => {
     if (!deleted) {
       return res.status(404).json({ message: "Student not found" });
     }
+
+    await Auditlog.create({
+      user: req.user.email,
+      action: `Deleted student: ${deleted.name}`,
+    });
 
     res.json({
       message: "Student deleted successfully",
@@ -329,6 +353,82 @@ app.get("/dashboard/stats", authMiddleware, async (req, res) => {
       success: false,
       message: "Server Error",
       data: null,
+    });
+  }
+});
+
+// GET students per branch + average CGPA per branch (Dashboard charts)
+// Powers two charts on the frontend: "Students per Branch" (totalStudents)
+// and "Average CGPA by Branch" (avgCgpa) — one aggregation, one round trip.
+app.get("/dashboard/branch-chart", authMiddleware, async (req, res) => {
+  try {
+    const data = await Student.aggregate([
+      {
+        $group: {
+          _id: "$course",
+          totalStudents: { $sum: 1 },
+          avgCgpa: { $avg: "$cgpa" },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          branch: "$_id",
+          totalStudents: 1,
+          avgCgpa: { $round: ["$avgCgpa", 2] },
+        },
+      },
+      { $sort: { totalStudents: -1 } },
+    ]);
+
+    res.json({
+      success: true,
+      data,
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({
+      success: false,
+      message: "Server Error",
+    });
+  }
+});
+
+// GET student registration trend, bucketed by month (Dashboard chart)
+// NOTE: relies on the student's createdAt timestamp (see schema above).
+// Students created before { timestamps: true } was added won't have a
+// createdAt field and are excluded here rather than crashing the pipeline.
+app.get("/dashboard/registration-trend", authMiddleware, async (req, res) => {
+  try {
+    const data = await Student.aggregate([
+      {
+        $match: { createdAt: { $exists: true } },
+      },
+      {
+        $group: {
+          _id: { $dateToString: { format: "%Y-%m", date: "$createdAt" } },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { _id: 1 } },
+      {
+        $project: {
+          _id: 0,
+          month: "$_id",
+          count: 1,
+        },
+      },
+    ]);
+
+    res.json({
+      success: true,
+      data,
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({
+      success: false,
+      message: "Server Error",
     });
   }
 });

@@ -8,6 +8,13 @@ import {
 } from "../services/studentService";
 import toast from "react-hot-toast";
 
+// FIX: was hardcoded to localhost, so the existing profile picture preview
+//404'd in production.
+const BASE_URL =
+  import.meta.env.MODE === "development"
+    ? "http://localhost:5000"
+    : "https://student-management-system-zk2b.onrender.com";
+
 function EditStudent() {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -146,7 +153,7 @@ function EditStudent() {
 
         {oldProfilePic && (
           <img
-            src={`http://localhost:5000${oldProfilePic}`}
+            src={`${BASE_URL}${oldProfilePic}`}
             alt="Student"
             className="profile-image"
           />

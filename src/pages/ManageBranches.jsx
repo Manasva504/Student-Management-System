@@ -5,18 +5,16 @@ function ManageBranches() {
   const [branch, setBranch] = useState("");
   const [branches, setBranches] = useState([]);
 
+  // FIX: there used to be two of these useEffects, both reading
+  // localStorage on mount — the second one ran right after the first and
+  // silently threw away the seeded defaults ("Computer Science", etc.)
+  // whenever nothing was saved yet, replacing them with an empty list.
   useEffect(() => {
     const savedBranches = JSON.parse(localStorage.getItem("branches")) || [
       "Computer Science",
       "Information Technology",
       "Electronics",
     ];
-    setBranches(savedBranches);
-  }, []);
-
-  useEffect(() => {
-    const savedBranches = JSON.parse(localStorage.getItem("branches")) || [];
-
     setBranches(savedBranches);
   }, []);
 

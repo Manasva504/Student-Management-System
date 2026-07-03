@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { changePassword } from "../services/authServices";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
-
+import { logoutUser } from "../services/authServices";
 function ChangePassword() {
   const navigate = useNavigate();
   const [oldPassword, setOldPassword] = useState("");
@@ -26,23 +26,35 @@ function ChangePassword() {
 
     try {
       await changePassword(oldPassword, newPassword);
-
-      toast.success("Password changed successfully. Please login again.");
-
-      localStorage.removeItem("token");
-
-      setTimeout(() => {
-        navigate("/login");
-      }, 1500);
-
-      setOldPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
-      setError("");
     } catch (error) {
       setOldPassword("");
       toast.error(error.response?.data?.message || "Failed to change password");
+      return;
     }
+
+    toast.success("Password changed successfully. Please login again.");
+
+    // FIX: logging out is best-effort cleanup after a successful password
+    // change — this used to be inside the same try block as
+    // changePassword(), so if this call failed the catch below would
+    // report "Failed to change password" even though the password had
+    // already been changed successfully.
+    try {
+      await logoutUser();
+    } catch (error) {
+      console.log(error);
+    }
+
+    localStorage.removeItem("token");
+
+    setTimeout(() => {
+      navigate("/login");
+    }, 1500);
+
+    setOldPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+    setError("");
   }
 
   useEffect(() => {

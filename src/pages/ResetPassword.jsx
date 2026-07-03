@@ -1,50 +1,33 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
+import { resetPassword } from "../services/authServices";
 
 function ResetPassword() {
   const navigate = useNavigate();
   const [email, setEmail] = useState(localStorage.getItem("resetEmail") || "");
   const [password, setPassword] = useState("");
-  //   const API_URL =
-  // "http://localhost:5000/api/auth";
 
-  const API_URL = "http://localhost:5000/api/auth";
+  // FIX: this used to hit a hardcoded "http://localhost:5000/api/auth" via
+  // a raw fetch(), so resetting a password was broken on the deployed site.
+  // Now goes through authServices.js (localhost in dev, Render in prod),
+  // and sends the OTP stashed by VerifyOtp.jsx since the backend now
+  // requires it here too.
   const handleResetPassword = async () => {
     try {
-      const response = await fetch(`${API_URL}/reset-password`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email,
-          password,
-        }),
-      });
+      const otp = localStorage.getItem("resetOtp") || "";
 
-      const data = await response.json();
+      const response = await resetPassword(email, password, otp);
 
-      console.log("Status:", response.status);
-      console.log("Response:", data);
+      toast.success(response.data.message || "Password reset successful");
 
-      if (!response.ok) {
-        toast.error(data.message);
-        return;
-      }
-
-      if (response.ok) {
-        toast.success(data.message || "Password reset successful");
-
-        localStorage.removeItem("resetEmail");
-      } else {
-        toast.error(data.message || "Failed to reset password");
-      }
+      localStorage.removeItem("resetEmail");
+      localStorage.removeItem("resetOtp");
 
       navigate("/login");
     } catch (error) {
       console.log(error);
-      toast.error("Something went wrong");
+      toast.error(error.response?.data?.message || "Failed to reset password");
     }
   };
 

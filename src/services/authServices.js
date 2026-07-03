@@ -1,16 +1,22 @@
 import axios from "axios";
 
-const API_URL = "https://student-management-system-zk2b.onrender.com/api/auth";
+// FIX: was hardcoded to localhost only (or, in other branches of this file,
+// hardcoded straight to the Render URL only) — meaning whichever one was
+// committed is the only environment this worked in. This now matches the
+// pattern already used in Profile.jsx: dev uses your local backend, a real
+// build (Vercel) uses Render, automatically.
+const BASE_URL =
+  import.meta.env.MODE === "development"
+    ? "http://localhost:5000"
+    : "https://student-management-system-zk2b.onrender.com";
+
+const API_URL = `${BASE_URL}/api/auth`;
+
 export const registerUser = (userData) => {
   return axios.post(`${API_URL}/register`, userData);
 };
 
-// export const loginUser = (userData) => {
-//   return axios.post(`${API_URL}/login`, userData);
-// };
-
 export const loginUser = (userData) => {
-  console.log("Calling:", `${API_URL}/login`);
   return axios.post(`${API_URL}/login`, userData);
 };
 
@@ -22,8 +28,11 @@ export const verifyOtp = (email, otp) => {
   return axios.post(`${API_URL}/verify-otp`, { email, otp });
 };
 
-export const resetPassword = (email, password) => {
-  return axios.post(`${API_URL}/reset-password`, { email, password });
+// FIX (security): reset-password now requires the OTP too — see
+// authRoutes.js. Previously this endpoint accepted just email+password,
+// which meant the OTP verification step could be skipped entirely.
+export const resetPassword = (email, password, otp) => {
+  return axios.post(`${API_URL}/reset-password`, { email, password, otp });
 };
 
 export const getProfile = () => {
@@ -67,6 +76,30 @@ export const deleteAccount = () => {
   const token = localStorage.getItem("token");
 
   return axios.delete(`${API_URL}/delete-account`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+};
+
+export const logoutUser = () => {
+  const token = localStorage.getItem("token");
+
+  return axios.post(
+    `${API_URL}/logout`,
+    {},
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  );
+};
+
+export const getActivityLogs = () => {
+  const token = localStorage.getItem("token");
+
+  return axios.get(`${API_URL}/activity-logs`, {
     headers: {
       Authorization: `Bearer ${token}`,
     },
