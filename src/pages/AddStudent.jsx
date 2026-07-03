@@ -4,6 +4,7 @@ import "../App.css";
 import { useState, useContext, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
+import { Plus } from "lucide-react";
 
 function AddStudent() {
   const navigate = useNavigate();
@@ -164,7 +165,7 @@ function AddStudent() {
         />
 
         <button type="submit" className="primary-btn">
-          Add Student
+          <Plus size={16} /> Add Student
         </button>
       </form>
     </div>

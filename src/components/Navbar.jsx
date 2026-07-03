@@ -2,6 +2,16 @@ import { Link, useNavigate } from "react-router-dom";
 import "../App.css";
 import toast from "react-hot-toast";
 import { logoutUser } from "../services/authServices";
+import {
+  LayoutDashboard,
+  UserPlus,
+  Users,
+  GitBranch,
+  History,
+  User,
+  KeyRound,
+  LogOut,
+} from "lucide-react";
 
 function Navbar() {
   const token = localStorage.getItem("token");
@@ -36,42 +46,56 @@ function Navbar() {
 
         <ul>
           <li>
-            <Link to="/">Dashboard</Link>
+            <Link to="/">
+              <LayoutDashboard size={16} /> Dashboard
+            </Link>
           </li>
 
           {user?.role === "Admin" && (
             <li>
-              <Link to="/add-student">Add Student</Link>
+              <Link to="/add-student">
+                <UserPlus size={16} /> Add Student
+              </Link>
             </li>
           )}
 
           <li>
-            <Link to="/students">Student List</Link>
+            <Link to="/students">
+              <Users size={16} /> Student List
+            </Link>
           </li>
 
           {user?.role === "Admin" && (
             <li>
-              <Link to="/manage-branches">Manage Branches</Link>
+              <Link to="/manage-branches">
+                <GitBranch size={16} /> Manage Branches
+              </Link>
             </li>
           )}
 
           {user?.role === "Admin" && (
             <li>
-              <Link to="/activity-history">Activity History</Link>
+              <Link to="/activity-history">
+                <History size={16} /> Activity History
+              </Link>
             </li>
           )}
 
           <li>
-            <Link to="/profile">Profile</Link>
+            <Link to="/profile">
+              <User size={16} /> Profile
+            </Link>
           </li>
 
           <li>
-            <Link to="/change-password">Change Password</Link>
+            <Link to="/change-password">
+              <KeyRound size={16} /> Change Password
+            </Link>
           </li>
 
           <li>
             <button onClick={handleLogout} className="logout-btn">
-              Logout
+              <LogOut size={16} /> Logout
             </button>
           </li>
         </ul>

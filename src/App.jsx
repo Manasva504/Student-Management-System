@@ -134,7 +134,21 @@ function AppContent() {
 function App() {
   return (
     <>
-      <Toaster position="top-right" />
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 3500,
+          className: "sms-toast",
+          success: {
+            className: "sms-toast sms-toast--success",
+            iconTheme: { primary: "var(--success)", secondary: "#fff" },
+          },
+          error: {
+            className: "sms-toast sms-toast--error",
+            iconTheme: { primary: "var(--danger)", secondary: "#fff" },
+          },
+        }}
+      />
       <BrowserRouter>
         <AppContent />
       </BrowserRouter>

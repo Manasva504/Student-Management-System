@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { verifyOtp } from "../services/authServices";
+import { ShieldCheck } from "lucide-react";
 
 function VerifyOtp() {
   const navigate = useNavigate();
@@ -31,6 +32,9 @@ function VerifyOtp() {
   return (
     <div className="auth-container">
       <div className="auth-card">
+        <div className="auth-icon-wrap">
+          <ShieldCheck size={20} />
+        </div>
         <h2>Verify OTP</h2>
 
         <form

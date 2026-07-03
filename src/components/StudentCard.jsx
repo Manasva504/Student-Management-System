@@ -4,6 +4,8 @@ import { StudentContext } from "../context/StudentContext";
 import { Link } from "react-router-dom";
 import { deleteStudent as deleteStudentAPI } from "../services/studentService";
 import toast from "react-hot-toast";
+import { confirmDelete } from "../utils/confirm";
+import { Pencil, Trash2, Eye } from "lucide-react";
 
 // FIX: profile picture URLs were hardcoded to localhost, so they'd 404 in
 // production (Vercel frontend, Render backend). Same fix applied in
@@ -19,11 +21,9 @@ function StudentCard({ student }) {
   const user = token ? JSON.parse(atob(token.split(".")[1])) : null;
   const { fetchStudents } = useContext(StudentContext);
   async function deleteStudent() {
-    const confirmDelete = window.confirm(
-      `Are you sure you want to delete ${student.name}?`,
-    );
+    const confirmed = await confirmDelete(student.name);
 
-    if (!confirmDelete) {
+    if (!confirmed) {
       return;
     }
 
@@ -64,15 +64,19 @@ function StudentCard({ student }) {
       <p>Cgpa: {student.cgpa}</p>
 
       <Link to={`/students/${student.id}`}>
-        <button className="primary-btn">View Details</button>
+        <button className="primary-btn">
+          <Eye size={16} /> View Details
+        </button>
       </Link>
       {user?.role === "Admin" && (
         <>
           <Link to={`/edit-student/${student.id}`}>
-            <button className="primary-btn">Edit</button>
+            <button className="primary-btn">
+              <Pencil size={16} /> Edit
+            </button>
           </Link>
           <button className="delete-btn" onClick={deleteStudent}>
-            Delete
+            <Trash2 size={16} /> Delete
           </button>
         </>
       )}

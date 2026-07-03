@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
+import { Trash2 } from "lucide-react";
 
 function ManageBranches() {
   const [branch, setBranch] = useState("");
@@ -67,7 +68,7 @@ function ManageBranches() {
             <li key={index} className="branch-item">
               <span>{b}</span>
               <button className="delete-btn" onClick={() => deleteBranch(b)}>
-                Delete
+                <Trash2 size={16} /> Delete
               </button>
             </li>
           ))}

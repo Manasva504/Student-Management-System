@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { AnimatePresence, motion } from "framer-motion";
 import { loginUser } from "../services/authServices";
 import toast from "react-hot-toast";
+import LampToggle from "../components/LampToggle";
 import "../App.css";
 
 function Login() {
@@ -9,9 +11,20 @@ function Login() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const [isOn, setIsOn] = useState(false);
+  const [swingKey, setSwingKey] = useState(0);
+
+  function toggleLamp() {
+    setIsOn((prev) => !prev);
+    setSwingKey((prev) => prev + 1);
+  }
 
   async function handleLogin(e) {
     e.preventDefault();
+    setLoading(true);
 
     try {
       const response = await loginUser({
@@ -29,42 +42,159 @@ function Login() {
       console.log(error);
 
       toast.error(error.response?.data?.message || "Login Failed");
+    } finally {
+      setLoading(false);
     }
   }
 
   return (
-    <div className="form-page">
-      <h1>Login</h1>
+    <div className="lamp-login-page">
+      <LampToggle isOn={isOn} onToggle={toggleLamp} swingKey={swingKey} />
 
-      <form className="form-card" onSubmit={handleLogin}>
-        <label>Email</label>
-        <input
-          type="email"
-          placeholder="Enter your email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
+      <div className={`lamp-light-cone ${isOn ? "is-on" : ""}`} />
 
-        <label>Password</label>
-        <input
-          type="password"
-          placeholder="Enter your password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-        
-        <div className="forgot-password-link">
-          <Link to="/forgot-password">Forgot Password?</Link>
-        </div>
+      <p className="lamp-hint">
+        {isOn ? "Pull the cord to hide the form" : "Pull the cord to sign in"}
+      </p>
 
-        <button type="submit" className="primary-btn">
-          Login
-        </button>
+      <AnimatePresence>
+        {isOn && (
+          <motion.form
+            className="auth-card auth-card--enhanced lamp-form-card"
+            onSubmit={handleLogin}
+            initial={{ opacity: 0, y: 24, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 16, scale: 0.97 }}
+            transition={{ type: "spring", stiffness: 220, damping: 22 }}
+          >
+            <h2>Welcome Back</h2>
+            <p className="auth-subtitle">Sign in to manage your students</p>
 
-        <p>
-          Don't have an account? <Link to="/register">Register</Link>
-        </p>
-      </form>
+            <div className="auth-input-group">
+              <span className="auth-input-icon">
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M3 6.75A2.25 2.25 0 0 1 5.25 4.5h13.5A2.25 2.25 0 0 1 21 6.75v10.5A2.25 2.25 0 0 1 18.75 19.5H5.25A2.25 2.25 0 0 1 3 17.25V6.75Z"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="m3.5 6 8.5 6 8.5-6"
+                  />
+                </svg>
+              </span>
+              <input
+                type="email"
+                placeholder="Enter your email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="auth-input-group auth-input-group--icon">
+              <span className="auth-input-icon">
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M16.5 10.5V7.5a4.5 4.5 0 1 0-9 0v3M6 10.5h12A1.5 1.5 0 0 1 19.5 12v6a1.5 1.5 0 0 1-1.5 1.5H6A1.5 1.5 0 0 1 4.5 18v-6A1.5 1.5 0 0 1 6 10.5Z"
+                  />
+                </svg>
+              </span>
+              <input
+                type={showPassword ? "text" : "password"}
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+              <button
+                type="button"
+                className="auth-eye-btn"
+                onClick={() => setShowPassword((prev) => !prev)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? (
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M3.98 8.22A10.5 10.5 0 0 0 2.25 12S5.25 18 12 18s9.75-6 9.75-6-.6-1.06-1.73-2.28M9.9 9.9a3 3 0 1 0 4.24 4.24M6.6 6.6 3 3m3.6 3.6L9.9 9.9m4.24 4.24L18 18m-3.86-3.86L21 21"
+                    />
+                  </svg>
+                ) : (
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M2.25 12S5.25 18 12 18s9.75-6 9.75-6-3-6-9.75-6-9.75 6-9.75 6Z"
+                    />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
+                    />
+                  </svg>
+                )}
+              </button>
+            </div>
+
+            <div className="forgot-password-link">
+              <Link to="/forgot-password">Forgot Password?</Link>
+            </div>
+
+            <button
+              type="submit"
+              className="auth-submit-btn"
+              disabled={loading}
+            >
+              {loading ? (
+                <span className="auth-btn-loader">
+                  <span className="auth-spinner" />
+                  Signing in...
+                </span>
+              ) : (
+                "Sign In"
+              )}
+            </button>
+
+            <p>
+              Don't have an account? <Link to="/register">Register</Link>
+            </p>
+          </motion.form>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

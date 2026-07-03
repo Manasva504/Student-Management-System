@@ -6,6 +6,7 @@ import {
   getRegistrationTrend,
 } from "../services/studentService";
 import "../App.css";
+import { Users, TrendingUp, Award } from "lucide-react";
 import {
   BarChart,
   Bar,
@@ -89,15 +90,18 @@ function Dashboard() {
       <div className="dashboard-card">
         <h1>Dashboard Analytics</h1>
 
-        <h2>Total Students: {stats.totalStudents}</h2>
+        <h2>
+          <Users size={16} /> Total Students: {stats.totalStudents}
+        </h2>
 
         <h2>
-          Average CGPA: {stats.totalStudents > 0 ? stats.averageCGPA : "N/A"}
+          <TrendingUp size={16} /> Average CGPA:{" "}
+          {stats.totalStudents > 0 ? stats.averageCGPA : "N/A"}
         </h2>
 
         {/* FIX: highestCGPAStudent is null when there are no students */}
         <h2>
-          Highest CGPA Student:{" "}
+          <Award size={16} /> Highest CGPA Student:{" "}
           {stats.highestCGPAStudent ? stats.highestCGPAStudent.name : "N/A"}
         </h2>
 

@@ -5,8 +5,8 @@ import { uploadProfilePic } from "../services/studentService";
 import "../App.css";
 import { deleteAccount } from "../services/authServices";
 import { useNavigate } from "react-router-dom";
-import Swal from "sweetalert2";
 import toast from "react-hot-toast";
+import { confirmAction } from "../utils/confirm";
 import { logoutUser } from "../services/authServices";
 
 const BASE_URL =
@@ -31,17 +31,14 @@ function Profile() {
   }, []);
 
   async function handleDeleteAccount() {
-    const result = await Swal.fire({
+    const confirmed = await confirmAction({
       title: "Delete Account?",
       text: "This action cannot be undone.",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#d33",
-      cancelButtonColor: "#3085d6",
-      confirmButtonText: "Yes, delete it!",
+      confirmText: "Yes, delete it",
+      danger: true,
     });
 
-    if (!result.isConfirmed) return;
+    if (!confirmed) return;
 
     try {
       await deleteAccount();

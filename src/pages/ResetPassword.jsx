@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { resetPassword } from "../services/authServices";
+import { Lock } from "lucide-react";
 
 function ResetPassword() {
   const navigate = useNavigate();
@@ -34,6 +35,9 @@ function ResetPassword() {
   return (
     <div className="auth-container">
       <div className="auth-card">
+        <div className="auth-icon-wrap">
+          <Lock size={20} />
+        </div>
         <h2>Reset Password</h2>
 
         <form

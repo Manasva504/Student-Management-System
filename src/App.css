@@ -13,6 +13,14 @@
   --danger: #f43f5e;
   --danger-hover: #e11d48;
 
+  --success: #10b981;
+  --success-hover: #059669;
+  --success-light: rgba(16, 185, 129, 0.12);
+
+  --warning: #f59e0b;
+  --warning-hover: #d97706;
+  --warning-light: rgba(245, 158, 11, 0.12);
+
   /* Background: deep navy-to-slate gradient */
   --background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
 
@@ -111,6 +119,9 @@ nav ul li a {
   border-radius: 999px;
   transition: all var(--transition);
   border: 1px solid transparent;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 nav ul li a:hover {
@@ -131,6 +142,9 @@ nav ul li a:hover {
   letter-spacing: 0.2px;
   transition: all var(--transition);
   box-shadow: 0 2px 8px rgba(99, 102, 241, 0.4);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .logout-btn:hover {
@@ -154,6 +168,10 @@ nav ul li a:hover {
   transition: all var(--transition);
   box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
   letter-spacing: 0.2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
 }
 
 .primary-btn:hover {
@@ -174,6 +192,10 @@ nav ul li a:hover {
   cursor: pointer;
   transition: all var(--transition);
   box-shadow: 0 2px 8px rgba(244, 63, 94, 0.25);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
 }
 
 .delete-btn:hover {
@@ -300,6 +322,22 @@ nav ul li a:hover {
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 24px;
   margin-top: 24px;
+}
+
+.empty-state {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 48px 0;
+  color: var(--text-light);
+  opacity: 0.7;
+}
+
+.empty-state p {
+  margin: 0;
+  text-align: center;
 }
 
 /* ========================
@@ -1037,14 +1075,21 @@ input[type="number"] {
   text-decoration: underline;
 }
 
-/* Legacy classes kept for Login page */
-.auth-card h2 {
+/* Legacy classes kept for pages still using the plain dark .auth-card
+   (ForgotPassword, VerifyOtp, ResetPassword, Profile). Scoped with
+   :not(.auth-card--enhanced) so they can't leak into the enhanced variant
+   (Login) — a plain ".auth-card h2" / ".auth-card input" / ".auth-card
+   button" selector has the same specificity as the enhanced rules above,
+   and being later in the file was winning cascade ties, which is what
+   made the "Welcome Back" heading render white-on-white and clobbered the
+   icon-input's left padding. */
+.auth-card:not(.auth-card--enhanced) h2 {
   color: white;
   margin-bottom: 30px;
   font-size: 2rem;
 }
 
-.auth-card input {
+.auth-card:not(.auth-card--enhanced) input {
   width: 100%;
   padding: 14px;
   border: none;
@@ -1054,7 +1099,7 @@ input[type="number"] {
   outline: none;
 }
 
-.auth-card button {
+.auth-card:not(.auth-card--enhanced) button {
   width: 100%;
   padding: 14px;
   border: none;
@@ -1066,7 +1111,7 @@ input[type="number"] {
   transition: 0.3s;
 }
 
-.auth-card button:hover {
+.auth-card:not(.auth-card--enhanced) button:hover {
   transform: translateY(-2px);
   box-shadow: 0 0 15px rgba(108, 99, 255, 0.6);
 }
@@ -1168,4 +1213,280 @@ button:disabled {
   text-transform: uppercase;
   font-size: 0.78rem;
   letter-spacing: 0.5px;
+}
+
+/* ========================
+   TOASTS (react-hot-toast)
+   Styling only — call sites still use toast.success()/toast.error() from
+   react-hot-toast; the look is centralized here via <Toaster toastOptions>
+   in App.jsx so every screen gets the same card, without editing each one.
+======================== */
+.sms-toast {
+  font-family: "Inter", "Poppins", sans-serif !important;
+  font-size: 0.92rem !important;
+  font-weight: 500 !important;
+  color: var(--text-dark) !important;
+  background: var(--card-bg) !important;
+  border: 1px solid var(--card-border) !important;
+  border-radius: var(--radius) !important;
+  box-shadow: var(--shadow) !important;
+  padding: 14px 18px !important;
+}
+
+.sms-toast--success {
+  border-left: 4px solid var(--success) !important;
+}
+
+.sms-toast--error {
+  border-left: 4px solid var(--danger) !important;
+}
+
+/* ========================
+   SWEETALERT2 (confirm dialogs)
+   Overrides scoped to the custom classes handed to Swal.fire() via
+   confirmAction()/confirmDelete() in src/utils/confirm.js, so every
+   confirmation prompt in the app (delete student, delete account, ...)
+   shares one look instead of the library default.
+======================== */
+.sms-swal-popup {
+  font-family: "Inter", "Poppins", sans-serif;
+  background: var(--card-bg);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-hover);
+  border: 1px solid var(--card-border);
+  padding: 8px 8px 28px;
+}
+
+.sms-swal-title {
+  color: var(--text-dark);
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.sms-swal-text {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+.sms-swal-icon {
+  border-color: var(--primary) !important;
+  color: var(--primary) !important;
+}
+
+.sms-swal-icon--danger {
+  border-color: var(--danger) !important;
+  color: var(--danger) !important;
+}
+
+.sms-swal-btn {
+  margin: 0 6px;
+  padding: 11px 22px;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.sms-swal-btn--primary {
+  background: var(--primary-gradient);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
+}
+
+.sms-swal-btn--primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(99, 102, 241, 0.45);
+}
+
+.sms-swal-btn--danger {
+  background: linear-gradient(135deg, var(--danger), var(--danger-hover));
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(244, 63, 94, 0.35);
+}
+
+.sms-swal-btn--danger:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(244, 63, 94, 0.45);
+}
+
+.sms-swal-btn--cancel {
+  background: rgba(100, 116, 139, 0.12);
+  color: var(--text-muted);
+}
+
+.sms-swal-btn--cancel:hover {
+  background: rgba(100, 116, 139, 0.2);
+  color: var(--text-dark);
+}
+
+/* ========================
+   LAMP LOGIN
+   Pull-cord lamp on the Login page: click/tap the cord to toggle the lamp
+   and reveal the sign-in card inside its light cone.
+======================== */
+.lamp-login-page {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8vh 16px 64px;
+  overflow: hidden;
+}
+
+.lamp-rig {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.lamp-cord-top {
+  width: 2px;
+  height: 64px;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.05),
+    rgba(255, 255, 255, 0.4)
+  );
+}
+
+.lamp-shade-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform-origin: top center;
+}
+
+.lamp-shade {
+  width: 112px;
+  height: 58px;
+  background: linear-gradient(180deg, #2e2e3a, #17171d);
+  clip-path: polygon(38% 0%, 62% 0%, 100% 100%, 0% 100%);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+  transition: background 0.5s ease;
+}
+
+.lamp-shade.is-on {
+  background: linear-gradient(180deg, #3d3d4a, #221f2c);
+}
+
+.lamp-bulb-glow {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #55545c;
+  margin-top: -6px;
+  transition: all 0.5s ease;
+}
+
+.lamp-bulb-glow.is-on {
+  background: #ffe9a8;
+  box-shadow:
+    0 0 20px 8px rgba(255, 217, 128, 0.9),
+    0 0 60px 30px rgba(255, 200, 90, 0.45),
+    0 0 130px 70px rgba(255, 200, 90, 0.18);
+  animation: lamp-flicker 2.6s ease-in-out infinite;
+}
+
+@keyframes lamp-flicker {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+
+.lamp-pull-hit {
+  background: none;
+  border: none;
+  padding: 4px 26px 16px;
+  margin-top: -4px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 3;
+}
+
+.lamp-pull-string {
+  width: 2px;
+  height: 46px;
+  background: rgba(255, 255, 255, 0.4);
+  display: block;
+}
+
+.lamp-pull-knob {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--primary);
+  box-shadow: 0 0 10px rgba(99, 102, 241, 0.6);
+  margin-top: -1px;
+  transition: transform var(--transition);
+  display: block;
+}
+
+.lamp-pull-hit:hover .lamp-pull-knob {
+  transform: scale(1.2);
+  box-shadow: 0 0 16px rgba(99, 102, 241, 0.9);
+}
+
+.lamp-light-cone {
+  position: absolute;
+  top: 150px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(640px, 92vw);
+  height: 560px;
+  pointer-events: none;
+  opacity: 0;
+  clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
+  background: radial-gradient(
+    ellipse at top,
+    rgba(255, 214, 130, 0.32),
+    rgba(255, 214, 130, 0.08) 45%,
+    transparent 70%
+  );
+  transition: opacity 0.7s ease;
+  z-index: 1;
+}
+
+.lamp-light-cone.is-on {
+  opacity: 1;
+}
+
+.lamp-hint {
+  position: relative;
+  z-index: 3;
+  color: rgba(248, 250, 252, 0.55);
+  font-size: 0.82rem;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  text-align: center;
+  margin: 18px 0 6px;
+}
+
+.lamp-form-card {
+  position: relative;
+  z-index: 3;
+  margin-top: 8px;
+}
+
+@media (max-width: 480px) {
+  .lamp-shade {
+    width: 88px;
+    height: 46px;
+  }
+
+  .lamp-light-cone {
+    top: 120px;
+    height: 460px;
+  }
 }

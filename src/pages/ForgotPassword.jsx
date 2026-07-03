@@ -3,6 +3,7 @@ import { forgotPassword } from "../services/authServices";
 import { useNavigate } from "react-router-dom";
 import "../App.css";
 import toast from "react-hot-toast";
+import { KeyRound } from "lucide-react";
 
 function ForgotPassword() {
   const navigate = useNavigate();
@@ -32,6 +33,9 @@ function ForgotPassword() {
   return (
     <div className="auth-container">
       <div className="auth-card">
+        <div className="auth-icon-wrap">
+          <KeyRound size={20} />
+        </div>
         <h2>Forgot Password</h2>
 
         <form
