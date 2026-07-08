@@ -1,7 +1,9 @@
+import { useContext } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "../App.css";
 import toast from "react-hot-toast";
 import { logoutUser } from "../services/authServices";
+import { SocketContext } from "../context/SocketContext";
 import {
   LayoutDashboard,
   UserPlus,
@@ -16,6 +18,7 @@ import {
 function Navbar() {
   const token = localStorage.getItem("token");
   const user = token ? JSON.parse(atob(token.split(".")[1])) : null;
+  const { onlineCount } = useContext(SocketContext);
 
   const navigate = useNavigate();
 
@@ -91,6 +94,12 @@ function Navbar() {
             <Link to="/change-password">
               <KeyRound size={16} /> Change Password
             </Link>
+          </li>
+
+          <li>
+            <span className="online-indicator">
+              <span className="dot" /> {onlineCount} online
+            </span>
           </li>
 
           <li>

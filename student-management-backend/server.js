@@ -15,6 +15,9 @@ const xlsx = require("xlsx");
 const PDFDocument = require("pdfkit");
 const cron = require("node-cron");
 const sendNotificationEmail = require("./utils/sendNotificationEmail");
+const http = require("http");
+const { Server } = require("socket.io");
+const jwt = require("jsonwebtoken");
 
 const app = express();
 
@@ -47,24 +50,115 @@ const allowedOrigins = [
   /^https:\/\/student-management-system.*\.vercel\.app$/,
 ];
 
+// Shared by both Express's cors() middleware below and the Socket.IO
+// server's cors option further down — one origin list, one place that
+// decides who's allowed, instead of the same allowlist copy-pasted twice.
+function corsOriginCheck(origin, callback) {
+  if (!origin) return callback(null, true);
+
+  const isAllowed = allowedOrigins.some((o) =>
+    o instanceof RegExp ? o.test(origin) : o === origin,
+  );
+
+  if (isAllowed) {
+    callback(null, true);
+  } else {
+    console.log("CORS blocked origin:", origin);
+    callback(new Error("CORS: origin not allowed"));
+  }
+}
+
 app.use(
   cors({
-    origin: (origin, callback) => {
-      if (!origin) return callback(null, true);
-      const isAllowed = allowedOrigins.some((o) =>
-        o instanceof RegExp ? o.test(origin) : o === origin,
-      );
-      if (isAllowed) {
-        callback(null, true);
-      } else {
-        console.log("CORS blocked origin:", origin);
-        callback(new Error("CORS: origin not allowed"));
-      }
-    },
+    origin: corsOriginCheck,
     credentials: true,
   }),
 );
 app.use(express.json());
+
+// ── Socket.IO ────────────────────────────────────────────────
+// Wrap the Express app in a plain HTTP server so Socket.IO can attach to
+// it — this is required because Socket.IO needs to hijack the raw HTTP
+// upgrade handshake to open a WebSocket, which app.listen() alone doesn't
+// expose. server.listen() (at the bottom of this file) replaces
+// app.listen() as a result — Express requests still flow through app
+// exactly as before, this just changes what's actually listening on the
+// port.
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: corsOriginCheck,
+    credentials: true,
+  },
+});
+
+// Reject anonymous socket connections — every client must present the same
+// JWT it already uses for REST calls, verified the same way
+// middleware/authMiddleware.js verifies it for Express routes. There's no
+// req.header() here (this runs on the handshake, not an HTTP request), so
+// the token travels in `auth` instead: io(url, { auth: { token } }) on the
+// client, read back as socket.handshake.auth.token here.
+io.use((socket, next) => {
+  const token = socket.handshake.auth?.token;
+
+  if (!token) {
+    return next(new Error("Authentication required"));
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    socket.user = decoded;
+    next();
+  } catch (error) {
+    next(new Error("Invalid token"));
+  }
+});
+
+// Counts active socket connections per user (not per socket), so someone
+// with two tabs open still counts as one online user. Module-level Map,
+// same lifetime as the server process — this is in-memory presence, not
+// persisted anywhere.
+const onlineUsers = new Map(); // userId -> active socket count
+
+io.on("connection", (socket) => {
+  const { id: userId, email, role } = socket.user;
+
+  if (role === "Admin") {
+    socket.join("admins");
+  }
+
+  const previousCount = onlineUsers.get(userId) || 0;
+  onlineUsers.set(userId, previousCount + 1);
+
+  // Only a 0 → 1 transition is a genuinely new online user — a second tab
+  // from the same person shouldn't move the count or spam the activity feed.
+  if (previousCount === 0) {
+    io.emit("presence:count", onlineUsers.size);
+    io.to("admins").emit("activity:new", {
+      user: email,
+      action: "Came online",
+      createdAt: new Date(),
+    });
+  }
+
+  socket.on("disconnect", () => {
+    const currentCount = onlineUsers.get(userId) || 0;
+    const newCount = currentCount - 1;
+
+    if (newCount <= 0) {
+      onlineUsers.delete(userId);
+      io.emit("presence:count", onlineUsers.size);
+      io.to("admins").emit("activity:new", {
+        user: email,
+        action: "Went offline",
+        createdAt: new Date(),
+      });
+    } else {
+      onlineUsers.set(userId, newCount);
+    }
+  });
+});
 
 app.use((req, res, next) => {
   console.log(`${req.method} ${req.url}`);
@@ -235,6 +329,13 @@ app.post("/students", authMiddleware, adminOnly, async (req, res) => {
       action: `Added student: ${newStudent.name}`,
     });
 
+    io.emit("student:added", { id: newStudent._id, name: newStudent.name });
+    io.to("admins").emit("activity:new", {
+      user: req.user.email,
+      action: `Added student: ${newStudent.name}`,
+      createdAt: new Date(),
+    });
+
     // Fire-and-forget: never let a flaky email hold up the response or
     // fail an otherwise-successful add, same principle as audit logging.
     sendNotificationEmail(
@@ -285,6 +386,13 @@ app.put("/students/:id", authMiddleware, adminOnly, async (req, res) => {
       action: `Edited student: ${updated.name}`,
     });
 
+    io.emit("student:updated", { id: updated._id, name: updated.name });
+    io.to("admins").emit("activity:new", {
+      user: req.user.email,
+      action: `Edited student: ${updated.name}`,
+      createdAt: new Date(),
+    });
+
     sendNotificationEmail(
       updated.email,
       "Your Student Record Was Updated",
@@ -317,6 +425,13 @@ app.delete("/students/:id", authMiddleware, adminOnly, async (req, res) => {
     await Auditlog.create({
       user: req.user.email,
       action: `Deleted student: ${deleted.name}`,
+    });
+
+    io.emit("student:deleted", { id: deleted._id, name: deleted.name });
+    io.to("admins").emit("activity:new", {
+      user: req.user.email,
+      action: `Deleted student: ${deleted.name}`,
+      createdAt: new Date(),
     });
 
     res.json({
@@ -666,6 +781,9 @@ app.post("/admin/daily-summary", authMiddleware, adminOnly, async (req, res) => 
 // ── Start Server ─────────────────────────────────────────────
 const PORT = process.env.PORT || 5000;
 app.use(errorHandler);
-app.listen(PORT, () => {
+// server.listen, not app.listen — the HTTP server wrapping app is what
+// Socket.IO attached to above, so it has to be the thing actually bound
+// to the port, or every socket connection attempt fails silently.
+server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });

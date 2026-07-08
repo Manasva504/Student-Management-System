@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   getDashboardStats,
@@ -6,6 +6,8 @@ import {
   getRegistrationTrend,
 } from "../services/studentService";
 import "../App.css";
+import { SocketContext } from "../context/SocketContext";
+import ActivityFeed from "../components/ActivityFeed";
 import { Users, TrendingUp, Award } from "lucide-react";
 import {
   BarChart,
@@ -23,6 +25,7 @@ function Dashboard() {
   const token = localStorage.getItem("token");
 
   const user = token ? JSON.parse(atob(token.split(".")[1])) : null;
+  const { socket } = useContext(SocketContext);
   const [stats, setStats] = useState(null);
   const [branchChart, setBranchChart] = useState([]);
   const [trend, setTrend] = useState([]);
@@ -32,6 +35,28 @@ function Dashboard() {
     fetchStats();
     fetchCharts();
   }, []);
+
+  // Live updates: re-run the same fetches on any student mutation, from
+  // any connected client, so the stat chips and charts update without a
+  // page refresh.
+  useEffect(() => {
+    if (!socket) return;
+
+    function refresh() {
+      fetchStats();
+      fetchCharts();
+    }
+
+    socket.on("student:added", refresh);
+    socket.on("student:updated", refresh);
+    socket.on("student:deleted", refresh);
+
+    return () => {
+      socket.off("student:added", refresh);
+      socket.off("student:updated", refresh);
+      socket.off("student:deleted", refresh);
+    };
+  }, [socket]);
 
   async function fetchStats() {
     try {
@@ -178,6 +203,8 @@ function Dashboard() {
           </ResponsiveContainer>
         </div>
       )}
+
+      {user?.role === "Admin" && <ActivityFeed />}
     </>
   );
 }
