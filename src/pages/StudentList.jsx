@@ -1,52 +1,64 @@
-import { useState, useEffect } from "react";
+import { useContext, useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import StudentCard from "../components/StudentCard";
+import { fetchStudents } from "../redux/studentSlice";
 import {
-  getStudents,
   exportStudentsExcel,
   exportStudentsCSV,
   exportStudentsPDF,
 } from "../services/studentService";
 import "../App.css";
+import { SocketContext } from "../context/SocketContext";
 import { SearchX } from "lucide-react";
 import toast from "react-hot-toast";
 
 function StudentList() {
-  const token = localStorage.getItem("token");
-  const user = token ? JSON.parse(atob(token.split(".")[1])) : null;
+  const user = useSelector((state) => state.auth.user);
+  const { list: students, totalPages } = useSelector(
+    (state) => state.students,
+  );
+  const dispatch = useDispatch();
+  const { socket } = useContext(SocketContext);
 
-  const [students, setStudents] = useState([]);
   const [branchFilter, setBranchFilter] = useState("All");
   const [sortOrder, setSortOrder] = useState("default");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const [branches, setBranches] = useState([]);
   const [minCgpa, setMinCgpa] = useState("");
   const [maxCgpa, setMaxCgpa] = useState("");
 
   useEffect(() => {
-    fetchStudents();
-  }, [search, page, minCgpa, maxCgpa]);
+    dispatch(fetchStudents({ search, page, limit: 6, minCgpa, maxCgpa }));
+  }, [dispatch, search, page, minCgpa, maxCgpa]);
 
   useEffect(() => {
     const savedBranches = JSON.parse(localStorage.getItem("branches")) || [];
     setBranches(savedBranches);
   }, []);
 
-  const fetchStudents = async () => {
-    try {
-      const response = await getStudents(search, page, 6, minCgpa, maxCgpa);
+  // Live updates: previously nothing subscribed to these events for this
+  // page (only Dashboard.jsx did) — StudentList.jsx never actually
+  // refreshed when another client added/edited/deleted a student. Now that
+  // it reads from the same students slice Dashboard and everything else
+  // shares, one listener here keeps it live too.
+  useEffect(() => {
+    if (!socket) return;
 
-      console.log("FULL RESPONSE:", response.data);
-
-      setStudents(response.data.data || []);
-      setTotalPages(response.data.totalPages || 1);
-    } catch (error) {
-      console.log(error);
-      setStudents([]);
-      setTotalPages(1);
+    function refresh() {
+      dispatch(fetchStudents({ search, page, limit: 6, minCgpa, maxCgpa }));
     }
-  };
+
+    socket.on("student:added", refresh);
+    socket.on("student:updated", refresh);
+    socket.on("student:deleted", refresh);
+
+    return () => {
+      socket.off("student:added", refresh);
+      socket.off("student:updated", refresh);
+      socket.off("student:deleted", refresh);
+    };
+  }, [socket, dispatch, search, page, minCgpa, maxCgpa]);
 
   const filteredStudents =
     branchFilter === "All"

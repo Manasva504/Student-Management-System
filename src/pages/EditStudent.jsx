@@ -1,11 +1,8 @@
-import { useState, useEffect, useContext } from "react";
-import { StudentContext } from "../context/StudentContext";
+import { useState, useEffect } from "react";
+import { useDispatch } from "react-redux";
+import { updateStudentThunk, fetchStudents } from "../redux/studentSlice";
 import { useParams, useNavigate } from "react-router-dom";
-import {
-  updateStudent,
-  uploadProfilePic,
-  getStudentById,
-} from "../services/studentService";
+import { uploadProfilePic, getStudentById } from "../services/studentService";
 import toast from "react-hot-toast";
 
 // FIX: was hardcoded to localhost, so the existing profile picture preview
@@ -18,7 +15,7 @@ const BASE_URL =
 function EditStudent() {
   const navigate = useNavigate();
   const { id } = useParams();
-  const { fetchStudents } = useContext(StudentContext);
+  const dispatch = useDispatch();
 
   const [loading, setLoading] = useState(true);
 
@@ -82,9 +79,9 @@ function EditStudent() {
         profilePic: imageUrl,
       };
 
-      await updateStudent(id, updatedStudent);
+      await dispatch(updateStudentThunk({ id, student: updatedStudent })).unwrap();
 
-      await fetchStudents();
+      dispatch(fetchStudents());
 
       toast.success("Student Updated Successfully");
 

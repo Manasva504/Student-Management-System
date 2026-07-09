@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useEffect } from "react";
+import { useDispatch } from "react-redux";
 import { getProfile, updateProfile } from "../services/authServices";
 import { uploadProfilePic } from "../services/studentService";
 import "../App.css";
@@ -7,7 +8,7 @@ import { deleteAccount } from "../services/authServices";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { confirmAction } from "../utils/confirm";
-import { logoutUser } from "../services/authServices";
+import { logoutThunk } from "../redux/authSlice";
 
 const BASE_URL =
   import.meta.env.MODE === "development"
@@ -16,9 +17,7 @@ const BASE_URL =
 
 function Profile() {
   const navigate = useNavigate();
-  const token = localStorage.getItem("token");
-
-  const user = token ? JSON.parse(atob(token.split(".")[1])) : null;
+  const dispatch = useDispatch();
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -50,19 +49,13 @@ function Profile() {
       return;
     }
 
-    // FIX: logging out is best-effort cleanup after a successful delete —
-    // this used to be inside the same try block as deleteAccount(), so if
-    // this call failed (cold start, network blip, etc.) the catch below
-    // would report "Failed to delete account" even though the account had
-    // already been deleted. Isolating it means a logout hiccup can no
-    // longer misreport a successful deletion as a failure.
-    try {
-      await logoutUser();
-    } catch (error) {
-      console.log(error);
-    }
-
-    localStorage.removeItem("token");
+    // FIX (preserved): logging out is best-effort cleanup after a
+    // successful delete, isolated from the try/catch above so a logout
+    // hiccup can never misreport a successful deletion as a failure.
+    // logoutThunk() is fail-open by construction (see redux/authSlice.js)
+    // — it always clears state/localStorage, so no extra try/catch needed
+    // here either.
+    await dispatch(logoutThunk());
 
     navigate("/login");
   }

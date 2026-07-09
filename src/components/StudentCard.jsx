@@ -1,8 +1,7 @@
 import "../App.css";
-import { useContext } from "react";
-import { StudentContext } from "../context/StudentContext";
+import { useDispatch, useSelector } from "react-redux";
 import { Link } from "react-router-dom";
-import { deleteStudent as deleteStudentAPI } from "../services/studentService";
+import { deleteStudentThunk, fetchStudents } from "../redux/studentSlice";
 import toast from "react-hot-toast";
 import { confirmDelete } from "../utils/confirm";
 import { Pencil, Trash2, Eye } from "lucide-react";
@@ -16,10 +15,9 @@ const BASE_URL =
     : "https://student-management-system-zk2b.onrender.com";
 
 function StudentCard({ student }) {
-  const token = localStorage.getItem("token");
+  const user = useSelector((state) => state.auth.user);
+  const dispatch = useDispatch();
 
-  const user = token ? JSON.parse(atob(token.split(".")[1])) : null;
-  const { fetchStudents } = useContext(StudentContext);
   async function deleteStudent() {
     const confirmed = await confirmDelete(student.name);
 
@@ -28,9 +26,9 @@ function StudentCard({ student }) {
     }
 
     try {
-      await deleteStudentAPI(student.id);
+      await dispatch(deleteStudentThunk(student.id)).unwrap();
 
-      await fetchStudents();
+      dispatch(fetchStudents());
 
       toast.success("Student Deleted Successfully");
     } catch (error) {

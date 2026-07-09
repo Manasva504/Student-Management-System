@@ -1,8 +1,9 @@
 import { useContext } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
 import "../App.css";
 import toast from "react-hot-toast";
-import { logoutUser } from "../services/authServices";
+import { logoutThunk } from "../redux/authSlice";
 import { SocketContext } from "../context/SocketContext";
 import {
   LayoutDashboard,
@@ -16,26 +17,18 @@ import {
 } from "lucide-react";
 
 function Navbar() {
-  const token = localStorage.getItem("token");
-  const user = token ? JSON.parse(atob(token.split(".")[1])) : null;
+  const user = useSelector((state) => state.auth.user);
   const { onlineCount } = useContext(SocketContext);
+  const dispatch = useDispatch();
 
   const navigate = useNavigate();
 
   async function handleLogout() {
-    try {
-      await logoutUser(); // records the Logout audit entry server-side
-    } catch (error) {
-      // FIX: this call used to be un-caught. If it failed (cold start,
-      // network blip, or previously the missing /logout route entirely),
-      // the function threw before ever clearing the token or navigating —
-      // the user stayed stuck in a logged-in-looking state with no way out.
-      // The client-side logout (below) is what actually matters for the
-      // user, so it now always happens regardless of the API call's result.
-      console.log(error);
-    }
-
-    localStorage.removeItem("token");
+    // FIX (preserved): logoutThunk itself never rejects — it swallows its
+    // own API-call failure (cold start, network blip) so state/localStorage
+    // always get cleared client-side. dispatch(...) below is unconditional,
+    // never wrapped in try/catch, on purpose.
+    await dispatch(logoutThunk());
 
     toast.success("Logged out successfully");
 

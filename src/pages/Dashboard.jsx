@@ -1,10 +1,11 @@
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { Link } from "react-router-dom";
 import {
-  getDashboardStats,
-  getBranchChart,
-  getRegistrationTrend,
-} from "../services/studentService";
+  fetchDashboardStats,
+  fetchBranchChart,
+  fetchRegistrationTrend,
+} from "../redux/dashboardSlice";
 import "../App.css";
 import { SocketContext } from "../context/SocketContext";
 import ActivityFeed from "../components/ActivityFeed";
@@ -22,19 +23,18 @@ import {
 } from "recharts";
 
 function Dashboard() {
-  const token = localStorage.getItem("token");
-
-  const user = token ? JSON.parse(atob(token.split(".")[1])) : null;
+  const user = useSelector((state) => state.auth.user);
   const { socket } = useContext(SocketContext);
-  const [stats, setStats] = useState(null);
-  const [branchChart, setBranchChart] = useState([]);
-  const [trend, setTrend] = useState([]);
-  const [error, setError] = useState(false);
+  const dispatch = useDispatch();
+  const { stats, branchChart, trend, error } = useSelector(
+    (state) => state.dashboard,
+  );
 
   useEffect(() => {
-    fetchStats();
-    fetchCharts();
-  }, []);
+    dispatch(fetchDashboardStats());
+    dispatch(fetchBranchChart());
+    dispatch(fetchRegistrationTrend());
+  }, [dispatch]);
 
   // Live updates: re-run the same fetches on any student mutation, from
   // any connected client, so the stat chips and charts update without a
@@ -43,8 +43,9 @@ function Dashboard() {
     if (!socket) return;
 
     function refresh() {
-      fetchStats();
-      fetchCharts();
+      dispatch(fetchDashboardStats());
+      dispatch(fetchBranchChart());
+      dispatch(fetchRegistrationTrend());
     }
 
     socket.on("student:added", refresh);
@@ -56,34 +57,7 @@ function Dashboard() {
       socket.off("student:updated", refresh);
       socket.off("student:deleted", refresh);
     };
-  }, [socket]);
-
-  async function fetchStats() {
-    try {
-      const response = await getDashboardStats();
-      setStats(response.data);
-    } catch (error) {
-      console.error("Failed to fetch dashboard stats:", error);
-      setError(true);
-    }
-  }
-
-  async function fetchCharts() {
-    try {
-      const [branchRes, trendRes] = await Promise.all([
-        getBranchChart(),
-        getRegistrationTrend(),
-      ]);
-
-      setBranchChart(branchRes.data.data || []);
-      setTrend(trendRes.data.data || []);
-    } catch (error) {
-      // Charts are a bonus on top of the core stats above, so a failure
-      // here just means the chart sections stay hidden — it shouldn't
-      // block the rest of the dashboard from rendering.
-      console.error("Failed to fetch chart data:", error);
-    }
-  }
+  }, [socket, dispatch]);
 
   if (error) {
     return (
@@ -94,7 +68,10 @@ function Dashboard() {
           in a moment.
         </p>
         <div className="dashboard-buttons">
-          <button onClick={fetchStats} className="primary-btn">
+          <button
+            onClick={() => dispatch(fetchDashboardStats())}
+            className="primary-btn"
+          >
             Retry
           </button>
         </div>

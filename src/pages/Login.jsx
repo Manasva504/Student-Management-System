@@ -1,13 +1,15 @@
 import { useState } from "react";
+import { useDispatch } from "react-redux";
 import { useNavigate, Link } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { loginUser } from "../services/authServices";
+import { loginThunk } from "../redux/authSlice";
 import toast from "react-hot-toast";
 import LampToggle from "../components/LampToggle";
 import "../App.css";
 
 function Login() {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -27,13 +29,7 @@ function Login() {
     setLoading(true);
 
     try {
-      const response = await loginUser({
-        email,
-        password,
-      });
-
-      // Save token in localStorage
-      localStorage.setItem("token", response.data.token);
+      await dispatch(loginThunk({ email, password })).unwrap();
 
       toast.success("Login Successful");
 
@@ -41,7 +37,10 @@ function Login() {
     } catch (error) {
       console.log(error);
 
-      toast.error(error.response?.data?.message || "Login Failed");
+      // .unwrap() throws the rejectWithValue payload directly here
+      // (authSlice.js) — already the shape { message } from the backend,
+      // not a raw axios error with .response anymore.
+      toast.error(error?.message || "Login Failed");
     } finally {
       setLoading(false);
     }

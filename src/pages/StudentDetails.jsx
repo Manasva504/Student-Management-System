@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSelector } from "react-redux";
 import { useParams } from "react-router-dom";
 import { getStudentById, sendStudentNotification } from "../services/studentService";
 import "../App.css";
@@ -13,9 +14,7 @@ const BASE_URL =
 function StudentDetails() {
   const { id } = useParams();
   const [student, setStudent] = useState(null);
-
-  const token = localStorage.getItem("token");
-  const user = token ? JSON.parse(atob(token.split(".")[1])) : null;
+  const user = useSelector((state) => state.auth.user);
 
   useEffect(() => {
     fetchStudent();

@@ -1,14 +1,15 @@
-import { addStudent, uploadProfilePic } from "../services/studentService";
-import { StudentContext } from "../context/StudentContext";
+import { uploadProfilePic } from "../services/studentService";
+import { addStudentThunk, fetchStudents } from "../redux/studentSlice";
 import "../App.css";
-import { useState, useContext, useEffect } from "react";
+import { useState, useEffect } from "react";
+import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { Plus } from "lucide-react";
 
 function AddStudent() {
   const navigate = useNavigate();
-  const { fetchStudents } = useContext(StudentContext);
+  const dispatch = useDispatch();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [course, setCourse] = useState("");
@@ -76,9 +77,9 @@ function AddStudent() {
     };
 
     try {
-      await addStudent(newStudent);
+      await dispatch(addStudentThunk(newStudent)).unwrap();
 
-      await fetchStudents();
+      dispatch(fetchStudents());
 
       toast.success("Student Added Successfully");
 
