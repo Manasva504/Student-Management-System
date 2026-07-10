@@ -107,24 +107,30 @@ function AddStudent() {
           handleSubmit();
         }}
       >
-        <label>Name</label>
+        <label htmlFor="add-student-name">Name</label>
         <input
+          id="add-student-name"
           type="text"
           placeholder="Enter student name"
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
 
-        <label>Email</label>
+        <label htmlFor="add-student-email">Email</label>
         <input
+          id="add-student-email"
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
         />
 
-        <label>Course</label>
-        <select value={course} onChange={(e) => setCourse(e.target.value)}>
+        <label htmlFor="add-student-course">Course</label>
+        <select
+          id="add-student-course"
+          value={course}
+          onChange={(e) => setCourse(e.target.value)}
+        >
           <option value="">Select Branch</option>
 
           {branches.map((branch) => (
@@ -134,16 +140,18 @@ function AddStudent() {
           ))}
         </select>
 
-        <label>Age</label>
+        <label htmlFor="add-student-age">Age</label>
         <input
+          id="add-student-age"
           type="number"
           placeholder="Enter your age"
           value={age}
           onChange={(e) => setAge(e.target.value)}
           min="1"
         />
-        <label>Cgpa</label>
+        <label htmlFor="add-student-cgpa">Cgpa</label>
         <input
+          id="add-student-cgpa"
           type="text"
           placeholder="Enter CGPA"
           value={cgpa}
@@ -158,8 +166,9 @@ function AddStudent() {
           }}
         />
 
-        <label>Profile Picture</label>
+        <label htmlFor="add-student-profile-pic">Profile Picture</label>
         <input
+          id="add-student-profile-pic"
           type="file"
           accept="image/*"
           onChange={(e) => setProfilePic(e.target.files[0])}

@@ -91,7 +91,11 @@ function Login() {
                   />
                 </svg>
               </span>
+              <label htmlFor="login-email" className="sr-only">
+                Email
+              </label>
               <input
+                id="login-email"
                 type="email"
                 placeholder="Enter your email"
                 value={email}
@@ -117,7 +121,11 @@ function Login() {
                   />
                 </svg>
               </span>
+              <label htmlFor="login-password" className="sr-only">
+                Password
+              </label>
               <input
+                id="login-password"
                 type={showPassword ? "text" : "password"}
                 placeholder="Enter your password"
                 value={password}
