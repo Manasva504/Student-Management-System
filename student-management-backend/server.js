@@ -4,7 +4,7 @@
 const { server, logDailySummary } = require("./app");
 const connectDB = require("./config/db");
 const cron = require("node-cron");
-
+require("./listeners/authListeners");
 connectDB();
 
 // Runs once a day at midnight server time.

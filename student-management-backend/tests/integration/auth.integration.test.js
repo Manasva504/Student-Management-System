@@ -12,6 +12,32 @@ const { app } = require("../../app");
 const User = require("../../models/User");
 const Auditlog = require("../../models/Auditlog");
 
+// The login route emits "userLoggedIn" rather than writing the audit log
+// itself; this listener (normally registered once by server.js at real
+// boot) is what actually does it. app.js deliberately never registers it
+// (no startup side effects — see app.js's own comment), so this test has
+// to register it explicitly to see the same behavior the real app has.
+require("../../listeners/authListeners");
+
+// The listener's Auditlog.create() is a real, unawaited write from the
+// route's point of view (authEvents.emit() doesn't wait for listeners to
+// finish) — the request can resolve before that write actually lands in
+// the database. Polling briefly is what makes asserting on it reliable
+// instead of flaky.
+async function waitForAuditLog(query, { timeout = 1000, interval = 20 } = {}) {
+  const deadline = Date.now() + timeout;
+
+  while (Date.now() < deadline) {
+    const logs = await Auditlog.find(query);
+
+    if (logs.length > 0) return logs;
+
+    await new Promise((resolve) => setTimeout(resolve, interval));
+  }
+
+  return Auditlog.find(query);
+}
+
 let mongod;
 
 beforeAll(async () => {
@@ -44,7 +70,10 @@ describe("POST /api/auth/login", () => {
     expect(res.status).toBe(200);
     expect(typeof res.body.token).toBe("string");
 
-    const logs = await Auditlog.find({ user: "real-login@example.com", action: "Login" });
+    const logs = await waitForAuditLog({
+      user: "real-login@example.com",
+      action: "Login",
+    });
 
     expect(logs).toHaveLength(1);
   });

@@ -1,69 +1,21 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
 const User = require("../models/User");
-const sendEmail = require("../utils/sendEmail");
 const sendNotificationEmail = require("../utils/sendNotificationEmail");
 const router = express.Router();
 const authMiddleware = require("../middleware/authMiddleware");
 const adminOnly = require("../middleware/rolemiddleware");
 const Auditlog = require("../models/Auditlog");
+const { getNotificationStrategy } = require("../utils/notificationStrategies");
+const userService = require("../services/userService");
 
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
-
-    if (!email || !password) {
-      return res.status(400).json({
-        message: "Please provide Email and Password",
-      });
-    }
-    //find user by email
-    const user = await User.findOne({ email });
-
-    if (!user) {
-      return res.status(400).json({
-        message: "Invalid Credentials",
-      });
-    }
-
-    //compare passwords
-    const isMatch = await bcrypt.compare(password, user.password);
-
-    if (!isMatch) {
-      return res.status(400).json({
-        message: "Invalid Credentials",
-      });
-    }
-
-    //generate JWT Tokens
-    const token = jwt.sign(
-      {
-        id: user._id,
-        email: user.email,
-        role: user.role,
-      },
-      process.env.JWT_SECRET,
-      {
-        expiresIn: "1d",
-      },
-    );
-
-    await Auditlog.create({
-      user: user.email,
-      action: "Login",
-    });
-    res.status(200).json({
-      message: "Login successful",
-      token,
-    });
+    const result = await userService.login(email, password);
+    res.status(200).json(result);
   } catch (error) {
-    console.log(error);
-    res.status(500).json({
-      success: false,
-      message: "Server Error",
-      data: null,
-    });
+    res.status(error.statusCode || 500).json({ message: error.message });
   }
 });
 
@@ -145,7 +97,8 @@ router.post("/forgot-password", async (req, res) => {
     // printing the live password-reset OTP straight into Render's log
     // stream, which is a real leak (logs are visible to anyone with
     // dashboard access and often persist/get shipped elsewhere).
-    await sendEmail(
+    const sendOtp = getNotificationStrategy("email"); // hardcoded for now, dynamic later
+    await sendOtp(
       email,
       "Password Reset OTP",
       `Your OTP is ${otp}. It is valid for 5 minutes.`,

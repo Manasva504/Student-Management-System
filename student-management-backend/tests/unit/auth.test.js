@@ -16,6 +16,16 @@ const { app } = require("../../app");
 const User = require("../../models/User");
 const Auditlog = require("../../models/Auditlog");
 
+// The login route no longer writes the audit log itself — it emits
+// "userLoggedIn" and this listener (normally registered once by server.js
+// at real boot) is what actually calls Auditlog.create. app.js never
+// registers it (by design — see app.js's own comment on why it has no
+// startup side effects), so tests have to register it explicitly to
+// observe the same behavior the real running app has. Requiring it here
+// resolves to the same mocked Auditlog module above (Jest's module
+// registry is shared within this file), so the mock still sees the call.
+require("../../listeners/authListeners");
+
 beforeEach(() => {
   jest.clearAllMocks();
 });

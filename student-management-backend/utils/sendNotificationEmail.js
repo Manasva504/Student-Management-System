@@ -12,7 +12,7 @@ if (!hasEmailCredentials) {
   console.warn(
     "[sendNotificationEmail] EMAIL_USER/EMAIL_PASS not set — notification emails will fail until these are configured.",
   );
-}
+} 
 
 const transporter = hasEmailCredentials
   ? nodemailer.createTransport({
