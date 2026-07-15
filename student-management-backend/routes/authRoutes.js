@@ -8,6 +8,9 @@ const adminOnly = require("../middleware/rolemiddleware");
 const Auditlog = require("../models/Auditlog");
 const { getNotificationStrategy } = require("../utils/notificationStrategies");
 const userService = require("../services/userService");
+const { sendSuccess, sendError } = require("../utils/responseHandler");
+const { OTP_EXPIRY_MS, MESSAGES } = require("../utils/constants");
+const { hasRequiredFields } = require("../utils/validators");
 
 router.post("/login", async (req, res) => {
   try {
@@ -24,19 +27,15 @@ router.post("/register", async (req, res) => {
     const { name, email, password } = req.body;
 
     // Validation
-    if (!name || !email || !password) {
-      return res.status(400).json({
-        message: "All fields are required",
-      });
+    if (!hasRequiredFields(req.body, ["name", "email", "password"])) {
+      return sendError(res, 400, "All fields are required");
     }
 
     // Check if user already exists
     const existingUser = await User.findOne({ email });
 
     if (existingUser) {
-      return res.status(400).json({
-        message: "User already exists",
-      });
+      return sendError(res, 400, "User already exists");
     }
 
     // Hash password
@@ -60,17 +59,11 @@ router.post("/register", async (req, res) => {
       `Hi ${user.name},\n\nYour account has been created successfully. You can now log in and get started.`,
     ).catch((err) => console.error("Welcome email failed:", err.message));
 
-    res.status(201).json({
-      message: "User registered successfully",
-    });
+    sendSuccess(res, 201, "User registered successfully");
   } catch (error) {
     console.log(error);
 
-    res.status(500).json({
-      success: false,
-      message: "Server Error",
-      data: null,
-    });
+    sendError(res, 500, MESSAGES.SERVER_ERROR);
   }
 });
 router.post("/forgot-password", async (req, res) => {
@@ -80,16 +73,13 @@ router.post("/forgot-password", async (req, res) => {
     const user = await User.findOne({ email });
 
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      });
+      return sendError(res, 404, MESSAGES.USER_NOT_FOUND);
     }
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
     user.resetOtp = otp;
-    user.resetOtpExpiry = Date.now() + 5 * 60 * 1000;
+    user.resetOtpExpiry = Date.now() + OTP_EXPIRY_MS;
 
     await user.save();
 
@@ -104,17 +94,11 @@ router.post("/forgot-password", async (req, res) => {
       `Your OTP is ${otp}. It is valid for 5 minutes.`,
     );
 
-    res.json({
-      success: true,
-      message: "OTP sent successfully",
-    });
+    sendSuccess(res, 200, "OTP sent successfully");
   } catch (error) {
     console.log(error);
 
-    res.status(500).json({
-      success: false,
-      message: "Server Error",
-    });
+    sendError(res, 500, MESSAGES.SERVER_ERROR);
   }
 });
 
@@ -125,27 +109,18 @@ router.post("/verify-otp", async (req, res) => {
     const user = await User.findOne({ email });
 
     if (!user) {
-      return res.status(404).json({
-        message: "User not found",
-      });
+      return sendError(res, 404, MESSAGES.USER_NOT_FOUND);
     }
 
     if (user.resetOtp !== otp || user.resetOtpExpiry < Date.now()) {
-      return res.status(400).json({
-        message: "Invalid or Expired OTP",
-      });
+      return sendError(res, 400, "Invalid or Expired OTP");
     }
 
-    res.json({
-      success: true,
-      message: "OTP verified successfully",
-    });
+    sendSuccess(res, 200, "OTP verified successfully");
   } catch (error) {
     console.log(error);
 
-    res.status(500).json({
-      message: "Server Error",
-    });
+    sendError(res, 500, MESSAGES.SERVER_ERROR);
   }
 });
 
@@ -156,10 +131,7 @@ router.post("/reset-password", async (req, res) => {
     const user = await User.findOne({ email });
 
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      });
+      return sendError(res, 404, MESSAGES.USER_NOT_FOUND);
     }
 
     // FIX (security): this endpoint used to skip OTP verification entirely —
@@ -168,19 +140,17 @@ router.post("/reset-password", async (req, res) => {
     // It now re-checks the same resetOtp/resetOtpExpiry fields /verify-otp
     // checks, so a valid, unexpired OTP is required here too.
     if (!otp || user.resetOtp !== otp || user.resetOtpExpiry < Date.now()) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid or expired OTP",
-      });
+      return sendError(res, 400, "Invalid or expired OTP");
     }
 
     const isSamePassword = await bcrypt.compare(password, user.password);
 
     if (isSamePassword) {
-      return res.status(400).json({
-        success: false,
-        message: "New password cannot be the same as your current password.",
-      });
+      return sendError(
+        res,
+        400,
+        "New password cannot be the same as your current password.",
+      );
     }
     // Hash new password
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -194,17 +164,11 @@ router.post("/reset-password", async (req, res) => {
 
     await user.save();
 
-    res.json({
-      success: true,
-      message: "Password reset successful",
-    });
+    sendSuccess(res, 200, "Password reset successful");
   } catch (error) {
     console.log(error);
 
-    res.status(500).json({
-      success: false,
-      message: "Server Error",
-    });
+    sendError(res, 500, MESSAGES.SERVER_ERROR);
   }
 });
 
@@ -235,9 +199,7 @@ router.put("/profile", authMiddleware, async (req, res) => {
     const user = await User.findById(req.user.id);
 
     if (!user) {
-      return res.status(404).json({
-        message: "User not found",
-      });
+      return sendError(res, 404, MESSAGES.USER_NOT_FOUND);
     }
 
     user.name = name || user.name;
@@ -246,16 +208,11 @@ router.put("/profile", authMiddleware, async (req, res) => {
 
     await user.save();
 
-    res.json({
-      message: "Profile updated successfully",
-      user,
-    });
+    sendSuccess(res, 200, "Profile updated successfully", user);
   } catch (error) {
     console.log(error);
 
-    res.status(500).json({
-      message: "Server Error",
-    });
+    sendError(res, 500, MESSAGES.SERVER_ERROR);
   }
 });
 
@@ -263,34 +220,26 @@ router.put("/change-password", authMiddleware, async (req, res) => {
   try {
     const { oldPassword, newPassword } = req.body;
 
-    if (!oldPassword || !newPassword) {
-      return res.status(400).json({
-        message: "Both passwords are required",
-      });
+    if (!hasRequiredFields(req.body, ["oldPassword", "newPassword"])) {
+      return sendError(res, 400, "Both passwords are required");
     }
 
     const user = await User.findById(req.user.id);
 
     if (!user) {
-      return res.status(404).json({
-        message: "User not found",
-      });
+      return sendError(res, 404, MESSAGES.USER_NOT_FOUND);
     }
 
     const isMatch = await bcrypt.compare(oldPassword, user.password);
 
     if (!isMatch) {
-      return res.status(400).json({
-        message: "Current password is incorrect",
-      });
+      return sendError(res, 400, "Current password is incorrect");
     }
 
     const samePassword = await bcrypt.compare(newPassword, user.password);
 
     if (samePassword) {
-      return res.status(400).json({
-        message: "New password cannot be same as old password",
-      });
+      return sendError(res, 400, "New password cannot be same as old password");
     }
 
     user.password = await bcrypt.hash(newPassword, 10);
@@ -302,16 +251,11 @@ router.put("/change-password", authMiddleware, async (req, res) => {
       action: "Changed Password",
     });
 
-    res.json({
-      success: true,
-      message: "Password updated successfully",
-    });
+    sendSuccess(res, 200, "Password updated successfully");
   } catch (error) {
     console.log(error);
 
-    res.status(500).json({
-      message: "Server Error",
-    });
+    sendError(res, 500, MESSAGES.SERVER_ERROR);
   }
 });
 
@@ -319,16 +263,11 @@ router.delete("/delete-account", authMiddleware, async (req, res) => {
   try {
     await User.findByIdAndDelete(req.user.id);
 
-    res.json({
-      success: true,
-      message: "Account deleted successfully",
-    });
+    sendSuccess(res, 200, "Account deleted successfully");
   } catch (error) {
     console.log(error);
 
-    res.status(500).json({
-      message: "Server Error",
-    });
+    sendError(res, 500, MESSAGES.SERVER_ERROR);
   }
 });
 
@@ -339,16 +278,11 @@ router.post("/logout", authMiddleware, async (req, res) => {
       action: "Logout",
     });
 
-    res.json({
-      success: true,
-      message: "Logged out successfully",
-    });
+    sendSuccess(res, 200, "Logged out successfully");
   } catch (error) {
     console.log(error);
 
-    res.status(500).json({
-      message: "Server Error",
-    });
+    sendError(res, 500, MESSAGES.SERVER_ERROR);
   }
 });
 
