@@ -11,18 +11,48 @@ const multer = require("multer");
 const path = require("path");
 const Auditlog = require("./models/Auditlog");
 const Student = require("./models/Student");
+// KNOWN ACCEPTED RISK: xlsx has two unpatched high-severity CVEs
+// (GHSA-4r6h-8v6p-xvw6 prototype pollution, GHSA-5pgg-2g8v-p4x9 ReDoS),
+// neither fixable via `npm audit fix` — SheetJS never published a patched
+// version to npm for either. Accepted rather than migrated because this
+// app only ever calls xlsx.write() on server-generated data built from
+// buildStudentQuery() results (see /students/export/excel below) — it
+// never calls xlsx.read()/parse on attacker-controlled input, which is
+// the vector both CVEs require. Re-evaluate if this ever starts parsing
+// uploaded spreadsheets.
 const xlsx = require("xlsx");
 const PDFDocument = require("pdfkit");
 const sendNotificationEmail = require("./utils/sendNotificationEmail");
 const http = require("http");
 const { Server } = require("socket.io");
 const jwt = require("jsonwebtoken");
+const morgan = require("morgan");
+const logger = require("./utils/logger");
+const helmet = require("helmet");
+const mongoSanitize = require("express-mongo-sanitize");
 
 // This file only builds and exports the app/server/io — it has no startup
 // side effects (no DB connection, no cron scheduling, no port binding), so
 // it can be require()'d cleanly by Supertest in tests. server.js is the
 // only file that actually starts anything.
 const app = express();
+
+// Render sits directly in front of this app as a single reverse-proxy
+// hop. Without this, Express computes req.ip from the raw socket, which
+// resolves to Render's proxy IP for every request — collapsing every
+// real user into one shared rate-limit bucket instead of limiting each
+// of them individually. The literal 1 means "trust exactly one hop";
+// `true` would trust an unbounded chain and accept a spoofed
+// X-Forwarded-For from anywhere.
+app.set("trust proxy", 1);
+
+// Helmet first, before anything else — including cors(). If it ran after
+// cors() (as it used to), a rejected CORS origin calls next(err) inside
+// the cors middleware, which skips every subsequent non-error middleware
+// (helmet included) and jumps straight to errorHandler at the bottom —
+// meaning CORS-rejected responses would go out with no security headers
+// at all. Running helmet first guarantees every response gets them.
+app.use(helmet());
 
 // ── Middlewares ──────────────────────────────────────────────
 const allowedOrigins = [
@@ -55,6 +85,19 @@ app.use(
   }),
 );
 app.use(express.json());
+
+app.use(mongoSanitize());
+// Request logging — Morgan formats each request line ("combined" includes
+// method/URL/status/response time/remote addr/user-agent), piped through
+// the shared Winston logger instead of writing straight to console, so
+// request logs end up in the same place (console + logs/app.log) as every
+// other logger.info/warn call in the app. Placed before any routes are
+// registered so every request gets logged, including ones that 404.
+app.use(
+  morgan("combined", {
+    stream: { write: (message) => logger.info(message.trim()) },
+  }),
+);
 
 // ── Socket.IO ────────────────────────────────────────────────
 // Wrap the Express app in a plain HTTP server so Socket.IO can attach to
@@ -139,14 +182,12 @@ io.on("connection", (socket) => {
   });
 });
 
-app.use((req, res, next) => {
-  console.log(`${req.method} ${req.url}`);
-  next();
-});
-
 app.use("/api/auth", authRoutes);
 
 // ── File Upload ──────────────────────────────────────────────
+const MAX_UPLOAD_BYTES = 5 * 1024 * 1024; // 5MB
+const ALLOWED_UPLOAD_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"];
+
 const storage = multer.diskStorage({
   destination: "./uploads",
   filename: (req, file, cb) => {
@@ -154,12 +195,40 @@ const storage = multer.diskStorage({
   },
 });
 
-const upload = multer({ storage });
+const upload = multer({
+  storage,
+  limits: { fileSize: MAX_UPLOAD_BYTES },
+  // This is a profile picture upload — restrict to actual image types so
+  // an authenticated user can't stash arbitrary files (or an unbounded
+  // amount of data) behind a static URL served straight off this origin.
+  fileFilter: (req, file, cb) => {
+    if (!ALLOWED_UPLOAD_MIME_TYPES.includes(file.mimetype)) {
+      return cb(new Error("Only JPEG, PNG, and WEBP images are allowed"));
+    }
+
+    cb(null, true);
+  },
+});
 
 app.use("/uploads", express.static("uploads"));
 
-app.post("/upload", authMiddleware, upload.single("profilePic"), (req, res) => {
-  res.json({ imageUrl: `/uploads/${req.file.filename}` });
+app.post("/upload", authMiddleware, (req, res) => {
+  // Wrapped manually (instead of passing upload.single(...) as route
+  // middleware directly) so fileFilter/size-limit rejections come back as
+  // a clean 400 with the specific reason, instead of falling through to
+  // errorHandler's generic production-gated message.
+  upload.single("profilePic")(req, res, (err) => {
+    if (err) {
+      logger.error(`Upload rejected: ${err.message}`);
+      return res.status(400).json({ success: false, message: err.message });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: "No file uploaded" });
+    }
+
+    res.json({ imageUrl: `/uploads/${req.file.filename}` });
+  });
 });
 
 app.get("/", (req, res) => {
@@ -240,7 +309,7 @@ app.get("/students", authMiddleware, async (req, res) => {
       totalPages: Math.ceil(totalStudents / limit),
     });
   } catch (error) {
-    console.log(error);
+    logger.error(error.stack || error.message);
     res.status(500).json({
       success: false,
       message: "Server Error",
@@ -252,6 +321,10 @@ app.get("/students", authMiddleware, async (req, res) => {
 // GET single student
 app.get("/students/:id", authMiddleware, async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: "Invalid student ID" });
+    }
+
     const student = await Student.findById(req.params.id);
 
     if (!student) {
@@ -268,7 +341,7 @@ app.get("/students/:id", authMiddleware, async (req, res) => {
       profilePic: student.profilePic,
     });
   } catch (error) {
-    console.log(error);
+    logger.error(error.stack || error.message);
     res.status(500).json({
       success: false,
       message: "Server Error",
@@ -308,6 +381,10 @@ app.post("/students", authMiddleware, adminOnly, async (req, res) => {
       action: `Added student: ${newStudent.name}`,
     });
 
+    logger.info(
+      `Student created: name=${newStudent.name} email=${newStudent.email} by user=${req.user.email}`,
+    );
+
     io.emit("student:added", { id: newStudent._id, name: newStudent.name });
     io.to("admins").emit("activity:new", {
       user: req.user.email,
@@ -321,14 +398,14 @@ app.post("/students", authMiddleware, adminOnly, async (req, res) => {
       newStudent.email,
       "Welcome to Student Management System",
       `Hi ${newStudent.name},\n\nYour student record has been added to the Student Management System.\n\nCourse: ${newStudent.course}\nCGPA: ${newStudent.cgpa}\n\nIf you have any questions, contact your administrator.`,
-    ).catch((err) => console.error("Notification email failed:", err.message));
+    ).catch((err) => logger.error(`Notification email failed: ${err.message}`));
 
     res.status(201).json({
       message: "Student added successfully",
       student: { id: newStudent._id, ...newStudent._doc },
     });
   } catch (error) {
-    console.log(error);
+    logger.error(error.stack || error.message);
     res.status(500).json({
       success: false,
       message: "Server Error",
@@ -340,6 +417,10 @@ app.post("/students", authMiddleware, adminOnly, async (req, res) => {
 // PUT update student
 app.put("/students/:id", authMiddleware, adminOnly, async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: "Invalid student ID" });
+    }
+
     const { name, email, course, age, cgpa, profilePic } = req.body;
 
     if (age !== undefined && age <= 0) {
@@ -365,6 +446,10 @@ app.put("/students/:id", authMiddleware, adminOnly, async (req, res) => {
       action: `Edited student: ${updated.name}`,
     });
 
+    logger.info(
+      `Student updated: name=${updated.name} id=${updated._id} by user=${req.user.email}`,
+    );
+
     io.emit("student:updated", { id: updated._id, name: updated.name });
     io.to("admins").emit("activity:new", {
       user: req.user.email,
@@ -376,14 +461,14 @@ app.put("/students/:id", authMiddleware, adminOnly, async (req, res) => {
       updated.email,
       "Your Student Record Was Updated",
       `Hi ${updated.name},\n\nYour student record in the Student Management System has been updated.\n\nCourse: ${updated.course}\nCGPA: ${updated.cgpa}\n\nIf you didn't expect this change, contact your administrator.`,
-    ).catch((err) => console.error("Notification email failed:", err.message));
+    ).catch((err) => logger.error(`Notification email failed: ${err.message}`));
 
     res.json({
       message: "Student updated successfully",
       student: { id: updated._id, ...updated._doc },
     });
   } catch (error) {
-    console.log(error);
+    logger.error(error.stack || error.message);
     res.status(500).json({
       success: false,
       message: "Server Error",
@@ -395,6 +480,10 @@ app.put("/students/:id", authMiddleware, adminOnly, async (req, res) => {
 // DELETE student
 app.delete("/students/:id", authMiddleware, adminOnly, async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: "Invalid student ID" });
+    }
+
     const deleted = await Student.findByIdAndDelete(req.params.id);
 
     if (!deleted) {
@@ -405,6 +494,10 @@ app.delete("/students/:id", authMiddleware, adminOnly, async (req, res) => {
       user: req.user.email,
       action: `Deleted student: ${deleted.name}`,
     });
+
+    logger.info(
+      `Student deleted: name=${deleted.name} id=${deleted._id} by user=${req.user.email}`,
+    );
 
     io.emit("student:deleted", { id: deleted._id, name: deleted.name });
     io.to("admins").emit("activity:new", {
@@ -418,7 +511,7 @@ app.delete("/students/:id", authMiddleware, adminOnly, async (req, res) => {
       student: { id: deleted._id, ...deleted._doc },
     });
   } catch (error) {
-    console.log(error);
+    logger.error(error.stack || error.message);
     res.status(500).json({
       success: false,
       message: "Server Error",
@@ -432,6 +525,10 @@ app.delete("/students/:id", authMiddleware, adminOnly, async (req, res) => {
 // action, so it awaits the send and reports success/failure honestly.
 app.post("/students/:id/notify", authMiddleware, adminOnly, async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ success: false, message: "Invalid student ID" });
+    }
+
     const student = await Student.findById(req.params.id);
 
     if (!student) {
@@ -446,7 +543,7 @@ app.post("/students/:id/notify", authMiddleware, adminOnly, async (req, res) => 
 
     res.json({ success: true, message: "Notification email sent" });
   } catch (error) {
-    console.log(error);
+    logger.error(error.stack || error.message);
     res.status(500).json({
       success: false,
       message: "Failed to send notification email",
@@ -494,7 +591,7 @@ app.get(
       res.setHeader("Content-Disposition", "attachment; filename=students.xlsx");
       res.send(buffer);
     } catch (error) {
-      console.log(error);
+      logger.error(error.stack || error.message);
       res.status(500).json({ success: false, message: "Server Error" });
     }
   },
@@ -532,7 +629,7 @@ app.get("/students/export/csv", authMiddleware, adminOnly, async (req, res) => {
     res.setHeader("Content-Disposition", "attachment; filename=students.csv");
     res.send(csv);
   } catch (error) {
-    console.log(error);
+    logger.error(error.stack || error.message);
     res.status(500).json({ success: false, message: "Server Error" });
   }
 });
@@ -598,7 +695,7 @@ app.get("/students/export/pdf", authMiddleware, adminOnly, async (req, res) => {
 
     doc.end();
   } catch (error) {
-    console.log(error);
+    logger.error(error.stack || error.message);
     // The PDF may already be streaming by the time an error hits, in which
     // case headers are sent and a JSON error body would just crash again.
     if (!res.headersSent) {
@@ -641,7 +738,7 @@ app.get("/dashboard/stats", authMiddleware, async (req, res) => {
       highestCGPAStudent,
     });
   } catch (error) {
-    console.log(error);
+    logger.error(error.stack || error.message);
     res.status(500).json({
       success: false,
       message: "Server Error",
@@ -679,7 +776,7 @@ app.get("/dashboard/branch-chart", authMiddleware, async (req, res) => {
       data,
     });
   } catch (error) {
-    console.log(error);
+    logger.error(error.stack || error.message);
     res.status(500).json({
       success: false,
       message: "Server Error",
@@ -718,7 +815,7 @@ app.get("/dashboard/registration-trend", authMiddleware, async (req, res) => {
       data,
     });
   } catch (error) {
-    console.log(error);
+    logger.error(error.stack || error.message);
     res.status(500).json({
       success: false,
       message: "Server Error",
@@ -746,7 +843,7 @@ app.post("/admin/daily-summary", authMiddleware, adminOnly, async (req, res) => 
 
     res.json({ success: true, totalStudents });
   } catch (error) {
-    console.log(error);
+    logger.error(error.stack || error.message);
     res.status(500).json({ success: false, message: "Server Error" });
   }
 });

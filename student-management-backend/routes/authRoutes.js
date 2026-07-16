@@ -10,25 +10,48 @@ const { getNotificationStrategy } = require("../utils/notificationStrategies");
 const userService = require("../services/userService");
 const { sendSuccess, sendError } = require("../utils/responseHandler");
 const { OTP_EXPIRY_MS, MESSAGES } = require("../utils/constants");
-const { hasRequiredFields } = require("../utils/validators");
+const { hasRequiredFields, isValidEmail, isValidPassword } = require("../utils/validators");
+const logger = require("../utils/logger");
+const authLimiter = require("../middleware/rateLimiter");
 
-router.post("/login", async (req, res) => {
+router.post("/login", authLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
     const result = await userService.login(email, password);
     res.status(200).json(result);
   } catch (error) {
-    res.status(error.statusCode || 500).json({ message: error.message });
+    // error.message here comes from userService.login, which today only
+    // ever throws controlled, user-safe messages (e.g. "Invalid
+    // Credentials") — but gating it the same way errorHandler.js gates its
+    // own message means a future change to userService.login can't quietly
+    // start leaking internals through this route without also being caught
+    // in production.
+    const clientMessage =
+      process.env.NODE_ENV === "production"
+        ? error.statusCode
+          ? error.message
+          : MESSAGES.SERVER_ERROR
+        : error.message;
+
+    res.status(error.statusCode || 500).json({ message: clientMessage });
   }
 });
 
-router.post("/register", async (req, res) => {
+router.post("/register", authLimiter, async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
     // Validation
     if (!hasRequiredFields(req.body, ["name", "email", "password"])) {
       return sendError(res, 400, "All fields are required");
+    }
+
+    if (!isValidEmail(email)) {
+      return sendError(res, 400, MESSAGES.INVALID_EMAIL);
+    }
+
+    if (!isValidPassword(password)) {
+      return sendError(res, 400, MESSAGES.WEAK_PASSWORD);
     }
 
     // Check if user already exists
@@ -57,16 +80,16 @@ router.post("/register", async (req, res) => {
       user.email,
       "Welcome to Student Management System",
       `Hi ${user.name},\n\nYour account has been created successfully. You can now log in and get started.`,
-    ).catch((err) => console.error("Welcome email failed:", err.message));
+    ).catch((err) => logger.error(`Welcome email failed: ${err.message}`));
 
     sendSuccess(res, 201, "User registered successfully");
   } catch (error) {
-    console.log(error);
+    logger.error(error.stack || error.message);
 
     sendError(res, 500, MESSAGES.SERVER_ERROR);
   }
 });
-router.post("/forgot-password", async (req, res) => {
+router.post("/forgot-password", authLimiter, async (req, res) => {
   try {
     const { email } = req.body;
 
@@ -96,13 +119,13 @@ router.post("/forgot-password", async (req, res) => {
 
     sendSuccess(res, 200, "OTP sent successfully");
   } catch (error) {
-    console.log(error);
+    logger.error(error.stack || error.message);
 
     sendError(res, 500, MESSAGES.SERVER_ERROR);
   }
 });
 
-router.post("/verify-otp", async (req, res) => {
+router.post("/verify-otp", authLimiter, async (req, res) => {
   try {
     const { email, otp } = req.body;
 
@@ -118,15 +141,19 @@ router.post("/verify-otp", async (req, res) => {
 
     sendSuccess(res, 200, "OTP verified successfully");
   } catch (error) {
-    console.log(error);
+    logger.error(error.stack || error.message);
 
     sendError(res, 500, MESSAGES.SERVER_ERROR);
   }
 });
 
-router.post("/reset-password", async (req, res) => {
+router.post("/reset-password", authLimiter, async (req, res) => {
   try {
     const { email, password, otp } = req.body;
+
+    if (!isValidPassword(password)) {
+      return sendError(res, 400, MESSAGES.WEAK_PASSWORD);
+    }
 
     const user = await User.findOne({ email });
 
@@ -166,7 +193,7 @@ router.post("/reset-password", async (req, res) => {
 
     sendSuccess(res, 200, "Password reset successful");
   } catch (error) {
-    console.log(error);
+    logger.error(error.stack || error.message);
 
     sendError(res, 500, MESSAGES.SERVER_ERROR);
   }
@@ -184,7 +211,7 @@ router.get("/profile", authMiddleware, async (req, res) => {
 
     res.json(user);
   } catch (error) {
-    console.log(error);
+    logger.error(error.stack || error.message);
 
     res.status(500).json({
       message: "Server Error",
@@ -195,6 +222,10 @@ router.get("/profile", authMiddleware, async (req, res) => {
 router.put("/profile", authMiddleware, async (req, res) => {
   try {
     const { name, email, profilePic } = req.body;
+
+    if (email && !isValidEmail(email)) {
+      return sendError(res, 400, MESSAGES.INVALID_EMAIL);
+    }
 
     const user = await User.findById(req.user.id);
 
@@ -210,7 +241,7 @@ router.put("/profile", authMiddleware, async (req, res) => {
 
     sendSuccess(res, 200, "Profile updated successfully", user);
   } catch (error) {
-    console.log(error);
+    logger.error(error.stack || error.message);
 
     sendError(res, 500, MESSAGES.SERVER_ERROR);
   }
@@ -222,6 +253,10 @@ router.put("/change-password", authMiddleware, async (req, res) => {
 
     if (!hasRequiredFields(req.body, ["oldPassword", "newPassword"])) {
       return sendError(res, 400, "Both passwords are required");
+    }
+
+    if (!isValidPassword(newPassword)) {
+      return sendError(res, 400, MESSAGES.WEAK_PASSWORD);
     }
 
     const user = await User.findById(req.user.id);
@@ -253,7 +288,7 @@ router.put("/change-password", authMiddleware, async (req, res) => {
 
     sendSuccess(res, 200, "Password updated successfully");
   } catch (error) {
-    console.log(error);
+    logger.error(error.stack || error.message);
 
     sendError(res, 500, MESSAGES.SERVER_ERROR);
   }
@@ -265,7 +300,7 @@ router.delete("/delete-account", authMiddleware, async (req, res) => {
 
     sendSuccess(res, 200, "Account deleted successfully");
   } catch (error) {
-    console.log(error);
+    logger.error(error.stack || error.message);
 
     sendError(res, 500, MESSAGES.SERVER_ERROR);
   }
@@ -278,9 +313,11 @@ router.post("/logout", authMiddleware, async (req, res) => {
       action: "Logout",
     });
 
+    logger.info(`Logout: user=${req.user.email}`);
+
     sendSuccess(res, 200, "Logged out successfully");
   } catch (error) {
-    console.log(error);
+    logger.error(error.stack || error.message);
 
     sendError(res, 500, MESSAGES.SERVER_ERROR);
   }
@@ -295,7 +332,7 @@ router.get("/activity-logs", authMiddleware, adminOnly, async (req, res) => {
       logs,
     });
   } catch (error) {
-    console.log(error);
+    logger.error(error.stack || error.message);
 
     res.status(500).json({
       success: false,

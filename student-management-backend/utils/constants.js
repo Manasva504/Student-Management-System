@@ -5,5 +5,7 @@ module.exports = {
     INVALID_CREDENTIALS: "Invalid Credentials",
     SERVER_ERROR: "Server Error",
     USER_NOT_FOUND: "User not found",
+    INVALID_EMAIL: "Please provide a valid email address",
+    WEAK_PASSWORD: "Password must be at least 8 characters long",
   },
 };

@@ -165,7 +165,7 @@ describe("POST /students", () => {
 describe("PUT /students/:id", () => {
   it("returns 403 for a non-Admin token", async () => {
     const res = await request(app)
-      .put("/students/abc123")
+      .put("/students/507f1f77bcf86cd799439011")
       .set("Authorization", `Bearer ${studentToken}`)
       .send({ cgpa: 9 });
 
@@ -173,11 +173,21 @@ describe("PUT /students/:id", () => {
     expect(Student.findByIdAndUpdate).not.toHaveBeenCalled();
   });
 
+  it("returns 400 for a malformed ID", async () => {
+    const res = await request(app)
+      .put("/students/not-a-valid-id")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ cgpa: 9 });
+
+    expect(res.status).toBe(400);
+    expect(Student.findByIdAndUpdate).not.toHaveBeenCalled();
+  });
+
   it("returns 404 when the student doesn't exist", async () => {
     Student.findByIdAndUpdate.mockResolvedValue(null);
 
     const res = await request(app)
-      .put("/students/does-not-exist")
+      .put("/students/507f1f77bcf86cd799439099")
       .set("Authorization", `Bearer ${adminToken}`)
       .send({ cgpa: 9 });
 
@@ -186,14 +196,14 @@ describe("PUT /students/:id", () => {
 
   it("returns 200 and the updated student on success", async () => {
     Student.findByIdAndUpdate.mockResolvedValue({
-      _id: "abc123",
+      _id: "507f1f77bcf86cd799439011",
       _doc: { name: "Updated Name", cgpa: 9 },
       name: "Updated Name",
       cgpa: 9,
     });
 
     const res = await request(app)
-      .put("/students/abc123")
+      .put("/students/507f1f77bcf86cd799439011")
       .set("Authorization", `Bearer ${adminToken}`)
       .send({ cgpa: 9 });
 
@@ -208,10 +218,19 @@ describe("PUT /students/:id", () => {
 describe("DELETE /students/:id", () => {
   it("returns 403 for a non-Admin token", async () => {
     const res = await request(app)
-      .delete("/students/abc123")
+      .delete("/students/507f1f77bcf86cd799439011")
       .set("Authorization", `Bearer ${studentToken}`);
 
     expect(res.status).toBe(403);
+    expect(Student.findByIdAndDelete).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 for a malformed ID", async () => {
+    const res = await request(app)
+      .delete("/students/not-a-valid-id")
+      .set("Authorization", `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(400);
     expect(Student.findByIdAndDelete).not.toHaveBeenCalled();
   });
 
@@ -219,7 +238,7 @@ describe("DELETE /students/:id", () => {
     Student.findByIdAndDelete.mockResolvedValue(null);
 
     const res = await request(app)
-      .delete("/students/does-not-exist")
+      .delete("/students/507f1f77bcf86cd799439099")
       .set("Authorization", `Bearer ${adminToken}`);
 
     expect(res.status).toBe(404);
@@ -227,13 +246,13 @@ describe("DELETE /students/:id", () => {
 
   it("returns 200 and confirms deletion on success", async () => {
     Student.findByIdAndDelete.mockResolvedValue({
-      _id: "abc123",
+      _id: "507f1f77bcf86cd799439011",
       _doc: { name: "Gone Student" },
       name: "Gone Student",
     });
 
     const res = await request(app)
-      .delete("/students/abc123")
+      .delete("/students/507f1f77bcf86cd799439011")
       .set("Authorization", `Bearer ${adminToken}`);
 
     expect(res.status).toBe(200);
