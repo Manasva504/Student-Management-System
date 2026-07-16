@@ -1,5 +1,6 @@
 volumes:
   mongo-data:
+  redis-data:
 services:
   mongo:
     image: mongo
@@ -9,6 +10,19 @@ services:
     volumes:
       - mongo-data:/data/db
 
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    # This is a cache, not a system of record — RDB snapshotting (dump
+    # every 60s if at least 1 key changed) just means a warm cache
+    # survives a container restart. Not required for correctness; the app
+    # already treats a cold/unreachable Redis as a normal cache miss.
+    command: redis-server --save 60 1
+
   backend:
     build: ./student-management-backend
     container_name: backend
@@ -16,7 +30,8 @@ services:
       - "5000:5000"
     depends_on:
       - mongo
-    env_file: 
+      - redis
+    env_file:
       ./student-management-backend/.env
 
   frontend:

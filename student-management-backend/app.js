@@ -30,6 +30,8 @@ const morgan = require("morgan");
 const logger = require("./utils/logger");
 const helmet = require("helmet");
 const mongoSanitize = require("express-mongo-sanitize");
+const { cacheGet, cacheSet, invalidateStudentCaches } = require("./utils/cache");
+const { CACHE_TTL_SECONDS } = require("./utils/constants");
 
 // This file only builds and exports the app/server/io — it has no startup
 // side effects (no DB connection, no cron scheduling, no port binding), so
@@ -269,7 +271,18 @@ function buildStudentQuery({ search, branch, minCgpa, maxCgpa }) {
 
 // GET all students with search, filter, sort and pagination
 app.get("/students", authMiddleware, async (req, res) => {
+  // Every filter/sort/page combination is a different result set, so the
+  // full query string is part of the key — a search for "asha" and a
+  // search for "ben" must never collide on the same cache entry.
+  const cacheKey = `students:${JSON.stringify(req.query)}`;
+
   try {
+    const cached = await cacheGet(cacheKey);
+
+    if (cached) {
+      return res.json(cached);
+    }
+
     const { sortBy, page = 1, limit = 5 } = req.query;
 
     let query = buildStudentQuery(req.query);
@@ -300,14 +313,18 @@ app.get("/students", authMiddleware, async (req, res) => {
       profilePic: s.profilePic,
     }));
 
-    res.json({
+    const responseBody = {
       success: true,
       message: "Students fetched successfully",
       data: formatted,
       totalStudents,
       currentPage: Number(page),
       totalPages: Math.ceil(totalStudents / limit),
-    });
+    };
+
+    await cacheSet(cacheKey, responseBody, CACHE_TTL_SECONDS);
+
+    res.json(responseBody);
   } catch (error) {
     logger.error(error.stack || error.message);
     res.status(500).json({
@@ -381,6 +398,10 @@ app.post("/students", authMiddleware, adminOnly, async (req, res) => {
       action: `Added student: ${newStudent.name}`,
     });
 
+    // A new student changes both the list (every students:* key, since the
+    // query string varies the key) and every aggregate stat, so both go.
+    await invalidateStudentCaches();
+
     logger.info(
       `Student created: name=${newStudent.name} email=${newStudent.email} by user=${req.user.email}`,
     );
@@ -446,6 +467,8 @@ app.put("/students/:id", authMiddleware, adminOnly, async (req, res) => {
       action: `Edited student: ${updated.name}`,
     });
 
+    await invalidateStudentCaches();
+
     logger.info(
       `Student updated: name=${updated.name} id=${updated._id} by user=${req.user.email}`,
     );
@@ -494,6 +517,8 @@ app.delete("/students/:id", authMiddleware, adminOnly, async (req, res) => {
       user: req.user.email,
       action: `Deleted student: ${deleted.name}`,
     });
+
+    await invalidateStudentCaches();
 
     logger.info(
       `Student deleted: name=${deleted.name} id=${deleted._id} by user=${req.user.email}`,
@@ -706,17 +731,29 @@ app.get("/students/export/pdf", authMiddleware, adminOnly, async (req, res) => {
 
 // GET dashboard stats
 app.get("/dashboard/stats", authMiddleware, async (req, res) => {
+  const cacheKey = "dashboard:stats";
+
   try {
+    const cached = await cacheGet(cacheKey);
+
+    if (cached) {
+      return res.json(cached);
+    }
+
     const students = await Student.find();
     const totalStudents = students.length;
 
     if (totalStudents === 0) {
-      return res.json({
+      const emptyBody = {
         totalStudents: 0,
         studentsPerBranch: {},
         averageCGPA: "0.00",
         highestCGPAStudent: null,
-      });
+      };
+
+      await cacheSet(cacheKey, emptyBody, CACHE_TTL_SECONDS);
+
+      return res.json(emptyBody);
     }
 
     const studentsPerBranch = {};
@@ -731,12 +768,16 @@ app.get("/dashboard/stats", authMiddleware, async (req, res) => {
       s.cgpa > highest.cgpa ? s : highest,
     );
 
-    res.json({
+    const responseBody = {
       totalStudents,
       studentsPerBranch,
       averageCGPA: averageCGPA.toFixed(2),
       highestCGPAStudent,
-    });
+    };
+
+    await cacheSet(cacheKey, responseBody, CACHE_TTL_SECONDS);
+
+    res.json(responseBody);
   } catch (error) {
     logger.error(error.stack || error.message);
     res.status(500).json({
@@ -751,7 +792,15 @@ app.get("/dashboard/stats", authMiddleware, async (req, res) => {
 // Powers two charts on the frontend: "Students per Branch" (totalStudents)
 // and "Average CGPA by Branch" (avgCgpa) — one aggregation, one round trip.
 app.get("/dashboard/branch-chart", authMiddleware, async (req, res) => {
+  const cacheKey = "dashboard:branch-chart";
+
   try {
+    const cached = await cacheGet(cacheKey);
+
+    if (cached) {
+      return res.json(cached);
+    }
+
     const data = await Student.aggregate([
       {
         $group: {
@@ -771,10 +820,14 @@ app.get("/dashboard/branch-chart", authMiddleware, async (req, res) => {
       { $sort: { totalStudents: -1 } },
     ]);
 
-    res.json({
+    const responseBody = {
       success: true,
       data,
-    });
+    };
+
+    await cacheSet(cacheKey, responseBody, CACHE_TTL_SECONDS);
+
+    res.json(responseBody);
   } catch (error) {
     logger.error(error.stack || error.message);
     res.status(500).json({
@@ -789,7 +842,15 @@ app.get("/dashboard/branch-chart", authMiddleware, async (req, res) => {
 // Students created before { timestamps: true } was added won't have a
 // createdAt field and are excluded here rather than crashing the pipeline.
 app.get("/dashboard/registration-trend", authMiddleware, async (req, res) => {
+  const cacheKey = "dashboard:registration-trend";
+
   try {
+    const cached = await cacheGet(cacheKey);
+
+    if (cached) {
+      return res.json(cached);
+    }
+
     const data = await Student.aggregate([
       {
         $match: { createdAt: { $exists: true } },
@@ -810,10 +871,14 @@ app.get("/dashboard/registration-trend", authMiddleware, async (req, res) => {
       },
     ]);
 
-    res.json({
+    const responseBody = {
       success: true,
       data,
-    });
+    };
+
+    await cacheSet(cacheKey, responseBody, CACHE_TTL_SECONDS);
+
+    res.json(responseBody);
   } catch (error) {
     logger.error(error.stack || error.message);
     res.status(500).json({

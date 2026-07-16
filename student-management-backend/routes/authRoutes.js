@@ -13,6 +13,7 @@ const { OTP_EXPIRY_MS, MESSAGES } = require("../utils/constants");
 const { hasRequiredFields, isValidEmail, isValidPassword } = require("../utils/validators");
 const logger = require("../utils/logger");
 const authLimiter = require("../middleware/rateLimiter");
+const { blacklistToken } = require("../utils/cache");
 
 router.post("/login", authLimiter, async (req, res) => {
   try {
@@ -308,6 +309,14 @@ router.delete("/delete-account", authMiddleware, async (req, res) => {
 
 router.post("/logout", authMiddleware, async (req, res) => {
   try {
+    // req.user.exp comes straight from the verified JWT payload (tokenFactory
+    // signs with expiresIn, so jwt.verify always attaches it) — the
+    // blacklist entry only needs to outlive the token itself, not sit in
+    // Redis for hours after a token that was already about to expire.
+    const ttlSeconds = req.user.exp - Math.floor(Date.now() / 1000);
+
+    await blacklistToken(req.token, ttlSeconds);
+
     await Auditlog.create({
       user: req.user.email,
       action: "Logout",

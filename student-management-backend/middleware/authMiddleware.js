@@ -1,6 +1,7 @@
 const jwt = require("jsonwebtoken");
+const { isTokenBlacklisted } = require("../utils/cache");
 
-const authMiddleware = (req, res, next) => {
+const authMiddleware = async (req, res, next) => {
   try {
     // Get token from headers
     const authHeader = req.header("Authorization");
@@ -24,7 +25,15 @@ const authMiddleware = (req, res, next) => {
     // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
+    // A signature-valid token can still have been explicitly logged out —
+    // checked after verify() so we never waste a Redis round trip on a
+    // token that's malformed/expired/wrongly-signed anyway.
+    if (await isTokenBlacklisted(token)) {
+      return res.status(401).json({ message: "Token has been invalidated" });
+    }
+
     req.user = decoded;
+    req.token = token;
 
     next();
   } catch (error) {
