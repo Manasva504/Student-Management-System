@@ -8,7 +8,8 @@ const authMiddleware = require("./middleware/authMiddleware");
 const mongoose = require("mongoose");
 const adminOnly = require("./middleware/rolemiddleware");
 const multer = require("multer");
-const path = require("path");
+const { CloudinaryStorage } = require("multer-storage-cloudinary");
+const cloudinary = require("./utils/cloudinary");
 const Auditlog = require("./models/Auditlog");
 const Student = require("./models/Student");
 // KNOWN ACCEPTED RISK: xlsx has two unpatched high-severity CVEs
@@ -58,7 +59,8 @@ app.use(helmet());
 
 // ── Middlewares ──────────────────────────────────────────────
 const allowedOrigins = [
-  "http://localhost:5173",
+  "http://localhost:5173", // Vite dev server (npm run dev, outside Docker)
+  "http://localhost:8081", // Dockerized frontend (docker compose up)
   /^https:\/\/student-management-system.*\.vercel\.app$/,
 ];
 
@@ -186,14 +188,15 @@ io.on("connection", (socket) => {
 
 app.use("/api/auth", authRoutes);
 
-// ── File Upload ──────────────────────────────────────────────
+// ── File Upload (Cloudinary) ────────────────────────────────
 const MAX_UPLOAD_BYTES = 5 * 1024 * 1024; // 5MB
 const ALLOWED_UPLOAD_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
-const storage = multer.diskStorage({
-  destination: "./uploads",
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + path.extname(file.originalname));
+const storage = new CloudinaryStorage({
+  cloudinary,
+  params: {
+    folder: "student-profiles",
+    allowed_formats: ["jpg", "jpeg", "png", "webp"],
   },
 });
 
@@ -202,7 +205,7 @@ const upload = multer({
   limits: { fileSize: MAX_UPLOAD_BYTES },
   // This is a profile picture upload — restrict to actual image types so
   // an authenticated user can't stash arbitrary files (or an unbounded
-  // amount of data) behind a static URL served straight off this origin.
+  // amount of data) in Cloudinary storage under this app's account.
   fileFilter: (req, file, cb) => {
     if (!ALLOWED_UPLOAD_MIME_TYPES.includes(file.mimetype)) {
       return cb(new Error("Only JPEG, PNG, and WEBP images are allowed"));
@@ -211,8 +214,6 @@ const upload = multer({
     cb(null, true);
   },
 });
-
-app.use("/uploads", express.static("uploads"));
 
 app.post("/upload", authMiddleware, (req, res) => {
   // Wrapped manually (instead of passing upload.single(...) as route
@@ -229,7 +230,11 @@ app.post("/upload", authMiddleware, (req, res) => {
       return res.status(400).json({ success: false, message: "No file uploaded" });
     }
 
-    res.json({ imageUrl: `/uploads/${req.file.filename}` });
+    // multer-storage-cloudinary maps Cloudinary's upload result onto
+    // multer's file object: `path` is the asset's secure_url, `filename`
+    // is its public_id — the public_id is what a later replace/delete
+    // needs to clean the old asset up (see PUT/DELETE /students/:id).
+    res.json({ imageUrl: req.file.path, publicId: req.file.filename });
   });
 });
 
@@ -356,6 +361,7 @@ app.get("/students/:id", authMiddleware, async (req, res) => {
       age: student.age,
       cgpa: student.cgpa,
       profilePic: student.profilePic,
+      profilePicPublicId: student.profilePicPublicId,
     });
   } catch (error) {
     logger.error(error.stack || error.message);
@@ -370,7 +376,7 @@ app.get("/students/:id", authMiddleware, async (req, res) => {
 // POST add student
 app.post("/students", authMiddleware, adminOnly, async (req, res) => {
   try {
-    const { name, email, course, age, cgpa, profilePic } = req.body;
+    const { name, email, course, age, cgpa, profilePic, profilePicPublicId } = req.body;
 
     if (!name || !email || !course || age === undefined || cgpa === undefined) {
       return res.status(400).json({ message: "All fields are required" });
@@ -391,6 +397,7 @@ app.post("/students", authMiddleware, adminOnly, async (req, res) => {
       age,
       cgpa,
       profilePic,
+      profilePicPublicId,
     });
     await newStudent.save();
     await Auditlog.create({
@@ -442,7 +449,7 @@ app.put("/students/:id", authMiddleware, adminOnly, async (req, res) => {
       return res.status(400).json({ message: "Invalid student ID" });
     }
 
-    const { name, email, course, age, cgpa, profilePic } = req.body;
+    const { name, email, course, age, cgpa, profilePic, profilePicPublicId } = req.body;
 
     if (age !== undefined && age <= 0) {
       return res.status(400).json({ message: "Age must be greater than 0" });
@@ -452,14 +459,38 @@ app.put("/students/:id", authMiddleware, adminOnly, async (req, res) => {
       return res.status(400).json({ message: "CGPA must be between 0 and 10" });
     }
 
+    // Captured before the write so there's something to compare the new
+    // value against afterward — findByIdAndUpdate below only ever hands
+    // back one snapshot (the updated doc), not both.
+    const existing = await Student.findById(req.params.id);
+
     const updated = await Student.findByIdAndUpdate(
       req.params.id,
-      { name, email, course, age, cgpa, profilePic },
+      { name, email, course, age, cgpa, profilePic, profilePicPublicId },
       { new: true },
     );
 
     if (!updated) {
       return res.status(404).json({ message: "Student not found" });
+    }
+
+    // Only clean up Cloudinary once the new value is confirmed saved, and
+    // only when this update actually swapped in a different image —
+    // editing just the name/course/etc. shouldn't touch an existing photo.
+    // A Cloudinary hiccup here is logged, not thrown: it must never block
+    // a student-record update that already succeeded.
+    if (
+      existing?.profilePicPublicId &&
+      profilePicPublicId &&
+      profilePicPublicId !== existing.profilePicPublicId
+    ) {
+      try {
+        await cloudinary.uploader.destroy(existing.profilePicPublicId);
+      } catch (err) {
+        logger.warn(
+          `Failed to delete old Cloudinary asset ${existing.profilePicPublicId}: ${err.message}`,
+        );
+      }
     }
 
     await Auditlog.create({
@@ -511,6 +542,20 @@ app.delete("/students/:id", authMiddleware, adminOnly, async (req, res) => {
 
     if (!deleted) {
       return res.status(404).json({ message: "Student not found" });
+    }
+
+    // Don't leave the photo orphaned in Cloudinary storage once the student
+    // record it belonged to is gone. Same defensive try/catch as the PUT
+    // route above — a Cloudinary failure must never block a delete that
+    // already succeeded against the database.
+    if (deleted.profilePicPublicId) {
+      try {
+        await cloudinary.uploader.destroy(deleted.profilePicPublicId);
+      } catch (err) {
+        logger.warn(
+          `Failed to delete Cloudinary asset ${deleted.profilePicPublicId}: ${err.message}`,
+        );
+      }
     }
 
     await Auditlog.create({

@@ -4,13 +4,7 @@ import { updateStudentThunk, fetchStudents } from "../redux/studentSlice";
 import { useParams, useNavigate } from "react-router-dom";
 import { uploadProfilePic, getStudentById } from "../services/studentService";
 import toast from "react-hot-toast";
-
-// FIX: was hardcoded to localhost, so the existing profile picture preview
-//404'd in production.
-const BASE_URL =
-  import.meta.env.MODE === "development"
-    ? "http://localhost:5000"
-    : "https://student-management-system-zk2b.onrender.com";
+import { getThumbnailUrl } from "../utils/cloudinaryImage";
 
 function EditStudent() {
   const navigate = useNavigate();
@@ -25,6 +19,7 @@ function EditStudent() {
   const [age, setAge] = useState("");
   const [cgpa, setCgpa] = useState("");
   const [oldProfilePic, setOldProfilePic] = useState("");
+  const [oldProfilePicPublicId, setOldProfilePicPublicId] = useState("");
   const [profilePic, setProfilePic] = useState(null);
 
   useEffect(() => {
@@ -43,6 +38,7 @@ function EditStudent() {
       setAge(student.age);
       setCgpa(student.cgpa);
       setOldProfilePic(student.profilePic);
+      setOldProfilePicPublicId(student.profilePicPublicId);
 
       setLoading(false);
     } catch (error) {
@@ -59,6 +55,7 @@ function EditStudent() {
     }
 
     let imageUrl = oldProfilePic;
+    let publicId = oldProfilePicPublicId;
 
     try {
       if (profilePic) {
@@ -68,6 +65,7 @@ function EditStudent() {
         const uploadResponse = await uploadProfilePic(formData);
 
         imageUrl = uploadResponse.data.imageUrl;
+        publicId = uploadResponse.data.publicId;
       }
 
       const updatedStudent = {
@@ -77,6 +75,7 @@ function EditStudent() {
         age: Number(age),
         cgpa: Number(cgpa),
         profilePic: imageUrl,
+        profilePicPublicId: publicId,
       };
 
       await dispatch(updateStudentThunk({ id, student: updatedStudent })).unwrap();
@@ -150,7 +149,7 @@ function EditStudent() {
 
         {oldProfilePic && (
           <img
-            src={`${BASE_URL}${oldProfilePic}`}
+            src={getThumbnailUrl(oldProfilePic)}
             alt="Student"
             className="profile-image"
           />

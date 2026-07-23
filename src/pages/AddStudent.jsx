@@ -55,6 +55,7 @@ function AddStudent() {
     }
 
     let imageUrl = "";
+    let publicId = "";
 
     if (profilePic) {
       const formData = new FormData();
@@ -64,6 +65,7 @@ function AddStudent() {
       const uploadResponse = await uploadProfilePic(formData);
 
       imageUrl = uploadResponse.data.imageUrl;
+      publicId = uploadResponse.data.publicId;
     }
 
     const newStudent = {
@@ -74,6 +76,7 @@ function AddStudent() {
       age: Number(age),
       cgpa: Number(cgpa),
       profilePic: imageUrl,
+      profilePicPublicId: publicId,
     };
 
     try {

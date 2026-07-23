@@ -17,6 +17,13 @@ const { MongoMemoryServer } = require("mongodb-memory-server");
 jest.mock("../../utils/sendNotificationEmail", () =>
   jest.fn().mockResolvedValue(undefined),
 );
+// None of the fixtures below set a profilePicPublicId, so the PUT/DELETE
+// routes' cleanup calls never actually fire in this file today — mocked
+// anyway so a real Cloudinary network call is never even possible here,
+// now or if a future test in this file adds one.
+jest.mock("../../utils/cloudinary", () => ({
+  uploader: { destroy: jest.fn().mockResolvedValue({ result: "ok" }) },
+}));
 
 const { app } = require("../../app");
 const Student = require("../../models/Student");

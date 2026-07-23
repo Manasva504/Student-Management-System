@@ -14,6 +14,13 @@ jest.mock("../../models/Auditlog", () => ({ create: jest.fn() }));
 jest.mock("../../utils/sendNotificationEmail", () =>
   jest.fn().mockResolvedValue(undefined),
 );
+// Real Cloudinary credentials never exist in a test run, and nothing here
+// should ever make a real network call to Cloudinary's API — only
+// uploader.destroy() is used by the routes under test (PUT/DELETE), so
+// that's the only method this needs to fake.
+jest.mock("../../utils/cloudinary", () => ({
+  uploader: { destroy: jest.fn().mockResolvedValue({ result: "ok" }) },
+}));
 jest.mock("../../models/Student", () => {
   const mockSave = jest.fn().mockImplementation(function () {
     if (!this._id) this._id = "mocked-student-id";
@@ -39,6 +46,7 @@ jest.mock("../../models/Student", () => {
 const { app } = require("../../app");
 const Student = require("../../models/Student");
 const Auditlog = require("../../models/Auditlog");
+const cloudinary = require("../../utils/cloudinary");
 
 function signToken(role) {
   return jwt.sign(
@@ -213,6 +221,40 @@ describe("PUT /students/:id", () => {
       expect.objectContaining({ action: "Edited student: Updated Name" }),
     );
   });
+
+  it("deletes the old Cloudinary asset when the image is actually replaced", async () => {
+    Student.findById.mockResolvedValue({ profilePicPublicId: "old-public-id" });
+    Student.findByIdAndUpdate.mockResolvedValue({
+      _id: "507f1f77bcf86cd799439011",
+      _doc: { name: "Updated Name" },
+      name: "Updated Name",
+    });
+
+    const res = await request(app)
+      .put("/students/507f1f77bcf86cd799439011")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ profilePic: "https://res.cloudinary.com/x/new.jpg", profilePicPublicId: "new-public-id" });
+
+    expect(res.status).toBe(200);
+    expect(cloudinary.uploader.destroy).toHaveBeenCalledWith("old-public-id");
+  });
+
+  it("does not touch Cloudinary when the update doesn't change the image", async () => {
+    Student.findById.mockResolvedValue({ profilePicPublicId: "old-public-id" });
+    Student.findByIdAndUpdate.mockResolvedValue({
+      _id: "507f1f77bcf86cd799439011",
+      _doc: { name: "Renamed Only" },
+      name: "Renamed Only",
+    });
+
+    const res = await request(app)
+      .put("/students/507f1f77bcf86cd799439011")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ name: "Renamed Only" });
+
+    expect(res.status).toBe(200);
+    expect(cloudinary.uploader.destroy).not.toHaveBeenCalled();
+  });
 });
 
 describe("DELETE /students/:id", () => {
@@ -244,7 +286,7 @@ describe("DELETE /students/:id", () => {
     expect(res.status).toBe(404);
   });
 
-  it("returns 200 and confirms deletion on success", async () => {
+  it("returns 200 and confirms deletion on success, without touching Cloudinary when there's no stored asset", async () => {
     Student.findByIdAndDelete.mockResolvedValue({
       _id: "507f1f77bcf86cd799439011",
       _doc: { name: "Gone Student" },
@@ -257,8 +299,25 @@ describe("DELETE /students/:id", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.message).toBe("Student deleted successfully");
+    expect(cloudinary.uploader.destroy).not.toHaveBeenCalled();
     expect(Auditlog.create).toHaveBeenCalledWith(
       expect.objectContaining({ action: "Deleted student: Gone Student" }),
     );
+  });
+
+  it("deletes the Cloudinary asset when the removed student had one", async () => {
+    Student.findByIdAndDelete.mockResolvedValue({
+      _id: "507f1f77bcf86cd799439011",
+      _doc: { name: "Gone Student" },
+      name: "Gone Student",
+      profilePicPublicId: "some-public-id",
+    });
+
+    const res = await request(app)
+      .delete("/students/507f1f77bcf86cd799439011")
+      .set("Authorization", `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(200);
+    expect(cloudinary.uploader.destroy).toHaveBeenCalledWith("some-public-id");
   });
 });

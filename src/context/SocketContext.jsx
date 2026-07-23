@@ -2,11 +2,14 @@ import { createContext, useEffect, useState } from "react";
 import { io as ioClient } from "socket.io-client";
 import toast from "react-hot-toast";
 
-// Same MODE-based pattern as authServices.js / studentService.js.
+// Same pattern as authServices.js / studentService.js, VITE_API_BASE_URL
+// included — Socket.IO is served off the same Express server/port as the
+// REST API, so the same backend URL applies here too.
 const BASE_URL =
-  import.meta.env.MODE === "development"
+  import.meta.env.VITE_API_BASE_URL ||
+  (import.meta.env.MODE === "development"
     ? "http://localhost:5000"
-    : "https://student-management-system-zk2b.onrender.com";
+    : "https://student-management-system-zk2b.onrender.com");
 
 export const SocketContext = createContext({ socket: null, onlineCount: 0 });
 

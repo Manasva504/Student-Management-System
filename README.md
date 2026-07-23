@@ -12,6 +12,7 @@ A full-stack Student Management System built with React, Node.js, Express, and M
 - Security & Logging
 - Redis / Caching
 - Performance: Redis Caching
+- Cloudinary Setup
 - Screenshots
 - License
 
@@ -233,3 +234,31 @@ Measured with `scripts/benchmark.js` against 500 seeded student documents (`scri
 **Why the gap:** the cold path pays for a real Mongo round trip every time — for `/students`, a `countDocuments()` plus a `find().sort().skip().limit()` query over 500 documents; for `/dashboard/stats`, a full collection scan (`Student.find()` with no filter) plus in-process aggregation over all 500 documents on every request. The warm path skips Mongo entirely and returns the exact same JSON body straight from an in-memory Redis `GET` — no query planner, no disk/network I/O to the database, no aggregation work, just a key lookup. The gap would widen further on a larger collection or under concurrent load (the cold path scales with collection size and Mongo's current load; the warm path stays roughly constant), and would also be larger in production, where the backend and MongoDB are on separate hosts (Render + Atlas) rather than both local — this benchmark's cold numbers are a lower bound on the real-world gap, not an upper one.
 
 Reproduce it: `node scripts/seedBenchmarkData.js` (seeds `MONGO_URI`), start the backend, then `BENCH_TOKEN=<a valid JWT> node scripts/benchmark.js`.
+
+## Cloudinary Setup
+
+Student and user profile pictures are stored in [Cloudinary](https://cloudinary.com) rather than on local disk — required because Render's filesystem is ephemeral (anything written to it, including `POST /upload`'s old `./uploads` folder, is wiped on every redeploy).
+
+### Getting credentials
+
+1. Create a free account at [cloudinary.com](https://cloudinary.com/users/register/free).
+2. Once logged in, your **Dashboard** page shows all three values this app needs, under "Product Environment Credentials":
+   - **Cloud Name**
+   - **API Key**
+   - **API Secret** (click "reveal" to see it)
+
+### Environment variables
+
+Add these three to `student-management-backend/.env` (already present, secret-free, in `.env.example`):
+
+```env
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
+```
+
+The backend fails loudly at startup (logs a clear error and exits) if any of these three are missing outside test mode — better than a confusing 500 on the first upload attempt in production.
+
+### Image delivery convention
+
+Every rendered profile picture URL runs through `src/utils/cloudinaryImage.js`'s `getThumbnailUrl()`, which inserts `q_auto,f_auto,w_200,h_200,c_fill` into the Cloudinary URL path (right after `/upload/`) — automatic quality/format selection per requesting browser, cropped to a consistent 200×200 square — instead of ever serving the original, full-size upload for what's always displayed as a small avatar.

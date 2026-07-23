@@ -5,10 +5,17 @@ import axios from "axios";
 // committed is the only environment this worked in. This now matches the
 // pattern already used in Profile.jsx: dev uses your local backend, a real
 // build (Vercel) uses Render, automatically.
+//
+// VITE_API_BASE_URL wins when it's set (Docker passes it as a build arg —
+// see the root Dockerfile/docker-compose.yml — because a Docker build and
+// a real Vercel production build both look identical to Vite otherwise:
+// neither one is "dev mode"). Without it, falls back to the original
+// dev-vs-not-dev guess, so the real Vercel deployment is unaffected.
 const BASE_URL =
-  import.meta.env.MODE === "development"
+  import.meta.env.VITE_API_BASE_URL ||
+  (import.meta.env.MODE === "development"
     ? "http://localhost:5000"
-    : "https://student-management-system-zk2b.onrender.com";
+    : "https://student-management-system-zk2b.onrender.com");
 
 const API_URL = `${BASE_URL}/api/auth`;
 

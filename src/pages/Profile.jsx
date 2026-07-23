@@ -9,11 +9,7 @@ import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { confirmAction } from "../utils/confirm";
 import { logoutThunk } from "../redux/authSlice";
-
-const BASE_URL =
-  import.meta.env.MODE === "development"
-    ? "http://localhost:5000"
-    : "https://student-management-system-zk2b.onrender.com";
+import { getThumbnailUrl } from "../utils/cloudinaryImage";
 
 function Profile() {
   const navigate = useNavigate();
@@ -120,7 +116,7 @@ function Profile() {
         />
         {profilePic && (
           <img
-            src={`${BASE_URL}${profilePic}`}
+            src={getThumbnailUrl(profilePic)}
             alt="Profile"
             className="profile-image"
           />

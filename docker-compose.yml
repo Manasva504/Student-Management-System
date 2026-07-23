@@ -35,7 +35,14 @@ services:
       ./student-management-backend/.env
 
   frontend:
-    build: .
+    build:
+      context: .
+      # The frontend runs in the browser on your machine, not inside the
+      # Docker network — so it has to reach the backend via the host port
+      # mapping (localhost:5000), not the Docker service name (backend:5000),
+      # which only resolves for other containers.
+      args:
+        VITE_API_BASE_URL: http://localhost:5000
     container_name: frontend
     ports:
       - "8081:80"

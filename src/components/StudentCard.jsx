@@ -5,14 +5,7 @@ import { deleteStudentThunk, fetchStudents } from "../redux/studentSlice";
 import toast from "react-hot-toast";
 import { confirmDelete } from "../utils/confirm";
 import { Pencil, Trash2, Eye } from "lucide-react";
-
-// FIX: profile picture URLs were hardcoded to localhost, so they'd 404 in
-// production (Vercel frontend, Render backend). Same fix applied in
-// EditStudent.jsx and StudentDetails.jsx.
-const BASE_URL =
-  import.meta.env.MODE === "development"
-    ? "http://localhost:5000"
-    : "https://student-management-system-zk2b.onrender.com";
+import { getThumbnailUrl } from "../utils/cloudinaryImage";
 
 function StudentCard({ student }) {
   const user = useSelector((state) => state.auth.user);
@@ -44,7 +37,7 @@ function StudentCard({ student }) {
         <img
           src={
             student.profilePic
-              ? `${BASE_URL}${student.profilePic}`
+              ? getThumbnailUrl(student.profilePic)
               : "/default-avatar.png"
           }
           className="profile-image"

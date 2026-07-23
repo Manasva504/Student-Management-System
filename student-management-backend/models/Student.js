@@ -13,7 +13,13 @@ const studentSchema = new mongoose.Schema(
     course: { type: String, required: true },
     age: { type: Number, required: true },
     cgpa: { type: Number, required: true },
+    // Full Cloudinary secure_url (was a local "/uploads/..." relative path
+    // before the Cloudinary migration).
     profilePic: { type: String, default: "" },
+    // Cloudinary's public_id for the asset above — not shown anywhere,
+    // only used server-side to delete the old asset when it's replaced
+    // (PUT /students/:id) or the student is removed (DELETE /students/:id).
+    profilePicPublicId: { type: String, default: "" },
   },
   { timestamps: true },
 );
