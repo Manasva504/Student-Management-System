@@ -61,10 +61,10 @@ beforeEach(async () => {
   await Auditlog.deleteMany({});
 });
 
-describe("POST /api/auth/login", () => {
+describe("POST /api/v1/auth/login", () => {
   it("succeeds with the real seeded password and writes a real Login audit entry", async () => {
     const res = await request(app)
-      .post("/api/auth/login")
+      .post("/api/v1/auth/login")
       .send({ email: "real-login@example.com", password: "correctPassword123" });
 
     expect(res.status).toBe(200);
@@ -80,7 +80,7 @@ describe("POST /api/auth/login", () => {
 
   it("fails with the wrong password and logs nothing", async () => {
     const res = await request(app)
-      .post("/api/auth/login")
+      .post("/api/v1/auth/login")
       .send({ email: "real-login@example.com", password: "wrongPassword" });
 
     expect(res.status).toBe(400);
@@ -92,7 +92,7 @@ describe("POST /api/auth/login", () => {
 
   it("fails for an email that was never registered", async () => {
     const res = await request(app)
-      .post("/api/auth/login")
+      .post("/api/v1/auth/login")
       .send({ email: "never-registered@example.com", password: "whatever123" });
 
     expect(res.status).toBe(400);

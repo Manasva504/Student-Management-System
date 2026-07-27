@@ -59,7 +59,7 @@ function signToken(role) {
 const adminToken = signToken("Admin");
 const studentToken = signToken("Student");
 
-// GET /students chains .find(query).sort().skip().limit() — this builds a
+// GET /api/v1/students chains .find(query).sort().skip().limit() — this builds a
 // mock that supports that exact chain and resolves to `students` at the end.
 function mockFindChain(students) {
   const chain = {
@@ -81,9 +81,9 @@ beforeEach(() => {
   jest.clearAllMocks();
 });
 
-describe("GET /students", () => {
+describe("GET /api/v1/students", () => {
   it("returns 401 with no token", async () => {
-    const res = await request(app).get("/students");
+    const res = await request(app).get("/api/v1/students");
 
     expect(res.status).toBe(401);
   });
@@ -96,7 +96,7 @@ describe("GET /students", () => {
     ]);
 
     const res = await request(app)
-      .get("/students")
+      .get("/api/v1/students")
       .set("Authorization", `Bearer ${adminToken}`);
 
     expect(res.status).toBe(200);
@@ -108,7 +108,7 @@ describe("GET /students", () => {
   });
 });
 
-describe("POST /students", () => {
+describe("POST /api/v1/students", () => {
   const validBody = {
     name: "New Student",
     email: "new@x.com",
@@ -118,14 +118,14 @@ describe("POST /students", () => {
   };
 
   it("returns 401 with no token", async () => {
-    const res = await request(app).post("/students").send(validBody);
+    const res = await request(app).post("/api/v1/students").send(validBody);
 
     expect(res.status).toBe(401);
   });
 
   it("returns 403 for a non-Admin token (the adminOnly check)", async () => {
     const res = await request(app)
-      .post("/students")
+      .post("/api/v1/students")
       .set("Authorization", `Bearer ${studentToken}`)
       .send(validBody);
 
@@ -135,7 +135,7 @@ describe("POST /students", () => {
 
   it("returns 400 and never saves when a required field is missing", async () => {
     const res = await request(app)
-      .post("/students")
+      .post("/api/v1/students")
       .set("Authorization", `Bearer ${adminToken}`)
       .send({ ...validBody, email: undefined });
 
@@ -146,7 +146,7 @@ describe("POST /students", () => {
 
   it("returns 400 for an out-of-range CGPA", async () => {
     const res = await request(app)
-      .post("/students")
+      .post("/api/v1/students")
       .set("Authorization", `Bearer ${adminToken}`)
       .send({ ...validBody, cgpa: 11 });
 
@@ -157,7 +157,7 @@ describe("POST /students", () => {
 
   it("returns 201 and the created student on success, and logs it", async () => {
     const res = await request(app)
-      .post("/students")
+      .post("/api/v1/students")
       .set("Authorization", `Bearer ${adminToken}`)
       .send(validBody);
 
@@ -170,10 +170,10 @@ describe("POST /students", () => {
   });
 });
 
-describe("PUT /students/:id", () => {
+describe("PUT /api/v1/students/:id", () => {
   it("returns 403 for a non-Admin token", async () => {
     const res = await request(app)
-      .put("/students/507f1f77bcf86cd799439011")
+      .put("/api/v1/students/507f1f77bcf86cd799439011")
       .set("Authorization", `Bearer ${studentToken}`)
       .send({ cgpa: 9 });
 
@@ -183,7 +183,7 @@ describe("PUT /students/:id", () => {
 
   it("returns 400 for a malformed ID", async () => {
     const res = await request(app)
-      .put("/students/not-a-valid-id")
+      .put("/api/v1/students/not-a-valid-id")
       .set("Authorization", `Bearer ${adminToken}`)
       .send({ cgpa: 9 });
 
@@ -195,7 +195,7 @@ describe("PUT /students/:id", () => {
     Student.findByIdAndUpdate.mockResolvedValue(null);
 
     const res = await request(app)
-      .put("/students/507f1f77bcf86cd799439099")
+      .put("/api/v1/students/507f1f77bcf86cd799439099")
       .set("Authorization", `Bearer ${adminToken}`)
       .send({ cgpa: 9 });
 
@@ -211,7 +211,7 @@ describe("PUT /students/:id", () => {
     });
 
     const res = await request(app)
-      .put("/students/507f1f77bcf86cd799439011")
+      .put("/api/v1/students/507f1f77bcf86cd799439011")
       .set("Authorization", `Bearer ${adminToken}`)
       .send({ cgpa: 9 });
 
@@ -231,7 +231,7 @@ describe("PUT /students/:id", () => {
     });
 
     const res = await request(app)
-      .put("/students/507f1f77bcf86cd799439011")
+      .put("/api/v1/students/507f1f77bcf86cd799439011")
       .set("Authorization", `Bearer ${adminToken}`)
       .send({ profilePic: "https://res.cloudinary.com/x/new.jpg", profilePicPublicId: "new-public-id" });
 
@@ -248,7 +248,7 @@ describe("PUT /students/:id", () => {
     });
 
     const res = await request(app)
-      .put("/students/507f1f77bcf86cd799439011")
+      .put("/api/v1/students/507f1f77bcf86cd799439011")
       .set("Authorization", `Bearer ${adminToken}`)
       .send({ name: "Renamed Only" });
 
@@ -257,10 +257,10 @@ describe("PUT /students/:id", () => {
   });
 });
 
-describe("DELETE /students/:id", () => {
+describe("DELETE /api/v1/students/:id", () => {
   it("returns 403 for a non-Admin token", async () => {
     const res = await request(app)
-      .delete("/students/507f1f77bcf86cd799439011")
+      .delete("/api/v1/students/507f1f77bcf86cd799439011")
       .set("Authorization", `Bearer ${studentToken}`);
 
     expect(res.status).toBe(403);
@@ -269,7 +269,7 @@ describe("DELETE /students/:id", () => {
 
   it("returns 400 for a malformed ID", async () => {
     const res = await request(app)
-      .delete("/students/not-a-valid-id")
+      .delete("/api/v1/students/not-a-valid-id")
       .set("Authorization", `Bearer ${adminToken}`);
 
     expect(res.status).toBe(400);
@@ -280,7 +280,7 @@ describe("DELETE /students/:id", () => {
     Student.findByIdAndDelete.mockResolvedValue(null);
 
     const res = await request(app)
-      .delete("/students/507f1f77bcf86cd799439099")
+      .delete("/api/v1/students/507f1f77bcf86cd799439099")
       .set("Authorization", `Bearer ${adminToken}`);
 
     expect(res.status).toBe(404);
@@ -294,7 +294,7 @@ describe("DELETE /students/:id", () => {
     });
 
     const res = await request(app)
-      .delete("/students/507f1f77bcf86cd799439011")
+      .delete("/api/v1/students/507f1f77bcf86cd799439011")
       .set("Authorization", `Bearer ${adminToken}`);
 
     expect(res.status).toBe(200);
@@ -314,7 +314,7 @@ describe("DELETE /students/:id", () => {
     });
 
     const res = await request(app)
-      .delete("/students/507f1f77bcf86cd799439011")
+      .delete("/api/v1/students/507f1f77bcf86cd799439011")
       .set("Authorization", `Bearer ${adminToken}`);
 
     expect(res.status).toBe(200);

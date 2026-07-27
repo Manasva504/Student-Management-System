@@ -17,7 +17,7 @@ const BASE_URL =
     ? "http://localhost:5000"
     : "https://student-management-system-zk2b.onrender.com");
 
-const API_URL = `${BASE_URL}/api/auth`;
+const API_URL = `${BASE_URL}/api/v1/auth`;
 
 export const registerUser = (userData) => {
   return axios.post(`${API_URL}/register`, userData);

@@ -9,11 +9,9 @@ const BASE_URL =
     ? "http://localhost:5000"
     : "https://student-management-system-zk2b.onrender.com");
 
-// FIX: this used to be "${BASE_URL}/api/auth", which is wrong — server.js
-// mounts the student CRUD routes at the root ("/students", "/students/:id"),
-// not under /api/auth. Every call below (getStudents, addStudent, etc.) was
-// hitting a URL with no matching route on the backend.
-const API_URL = `${BASE_URL}/students`;
+// Student CRUD routes live under /api/v1/students (routes/studentRoutes.js),
+// not under /api/auth — see authServices.js for the auth routes' own prefix.
+const API_URL = `${BASE_URL}/api/v1/students`;
 
 export const getStudents = (
   search = "",
@@ -73,7 +71,7 @@ export const deleteStudent = (id) => {
 export const getDashboardStats = () => {
   const token = localStorage.getItem("token");
 
-  return axios.get(`${BASE_URL}/dashboard/stats`, {
+  return axios.get(`${BASE_URL}/api/v1/dashboard/stats`, {
     headers: {
       Authorization: `Bearer ${token}`,
     },
@@ -85,7 +83,7 @@ export const getDashboardStats = () => {
 export const getBranchChart = () => {
   const token = localStorage.getItem("token");
 
-  return axios.get(`${BASE_URL}/dashboard/branch-chart`, {
+  return axios.get(`${BASE_URL}/api/v1/dashboard/branch-chart`, {
     headers: {
       Authorization: `Bearer ${token}`,
     },
@@ -96,7 +94,7 @@ export const getBranchChart = () => {
 export const getRegistrationTrend = () => {
   const token = localStorage.getItem("token");
 
-  return axios.get(`${BASE_URL}/dashboard/registration-trend`, {
+  return axios.get(`${BASE_URL}/api/v1/dashboard/registration-trend`, {
     headers: {
       Authorization: `Bearer ${token}`,
     },
@@ -106,7 +104,7 @@ export const getRegistrationTrend = () => {
 export const uploadProfilePic = (formData) => {
   const token = localStorage.getItem("token");
 
-  return axios.post(`${BASE_URL}/upload`, formData, {
+  return axios.post(`${BASE_URL}/api/v1/upload`, formData, {
     headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": "multipart/form-data",

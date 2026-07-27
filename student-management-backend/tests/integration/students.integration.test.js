@@ -87,10 +87,10 @@ beforeEach(async () => {
   seededStudentId = seeded._id.toString();
 });
 
-describe("GET /students", () => {
+describe("GET /api/v1/students", () => {
   it("returns real paginated data from the real seeded collection", async () => {
     const res = await request(app)
-      .get("/students")
+      .get("/api/v1/students")
       .set("Authorization", `Bearer ${adminToken}`);
 
     expect(res.status).toBe(200);
@@ -100,7 +100,7 @@ describe("GET /students", () => {
   });
 });
 
-describe("POST /students", () => {
+describe("POST /api/v1/students", () => {
   const payload = {
     name: "Real New Student",
     email: "realnew@example.com",
@@ -111,7 +111,7 @@ describe("POST /students", () => {
 
   it("as Admin: creates a real document and a real audit log entry", async () => {
     const res = await request(app)
-      .post("/students")
+      .post("/api/v1/students")
       .set("Authorization", `Bearer ${adminToken}`)
       .send(payload);
 
@@ -129,7 +129,7 @@ describe("POST /students", () => {
 
   it("as Student: is rejected with 403 and writes nothing", async () => {
     const res = await request(app)
-      .post("/students")
+      .post("/api/v1/students")
       .set("Authorization", `Bearer ${studentToken}`)
       .send(payload);
 
@@ -145,10 +145,10 @@ describe("POST /students", () => {
   });
 });
 
-describe("PUT /students/:id", () => {
+describe("PUT /api/v1/students/:id", () => {
   it("as Admin: really updates the document", async () => {
     const res = await request(app)
-      .put(`/students/${seededStudentId}`)
+      .put(`/api/v1/students/${seededStudentId}`)
       .set("Authorization", `Bearer ${adminToken}`)
       .send({ cgpa: 9.9 });
 
@@ -161,7 +161,7 @@ describe("PUT /students/:id", () => {
 
   it("as Student: is rejected with 403 and leaves the document unchanged", async () => {
     const res = await request(app)
-      .put(`/students/${seededStudentId}`)
+      .put(`/api/v1/students/${seededStudentId}`)
       .set("Authorization", `Bearer ${studentToken}`)
       .send({ cgpa: 1.1 });
 
@@ -173,10 +173,10 @@ describe("PUT /students/:id", () => {
   });
 });
 
-describe("DELETE /students/:id", () => {
+describe("DELETE /api/v1/students/:id", () => {
   it("as Admin: really removes the document", async () => {
     const res = await request(app)
-      .delete(`/students/${seededStudentId}`)
+      .delete(`/api/v1/students/${seededStudentId}`)
       .set("Authorization", `Bearer ${adminToken}`);
 
     expect(res.status).toBe(200);
@@ -188,7 +188,7 @@ describe("DELETE /students/:id", () => {
 
   it("as Student: is rejected with 403 and the document still exists", async () => {
     const res = await request(app)
-      .delete(`/students/${seededStudentId}`)
+      .delete(`/api/v1/students/${seededStudentId}`)
       .set("Authorization", `Bearer ${studentToken}`);
 
     expect(res.status).toBe(403);

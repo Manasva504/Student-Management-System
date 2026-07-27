@@ -1,4 +1,4 @@
-// Unit tests for POST /api/auth/login. User lookup and password
+// Unit tests for POST /api/v1/auth/login. User lookup and password
 // comparison are mocked (bcrypt is deliberately slow, and comparing
 // against a real hash would need one pre-computed just to drive branching
 // logic that doesn't actually depend on bcrypt's real behavior). jwt.sign
@@ -30,10 +30,10 @@ beforeEach(() => {
   jest.clearAllMocks();
 });
 
-describe("POST /api/auth/login", () => {
+describe("POST /api/v1/auth/login", () => {
   it("returns 400 when email or password is missing, without querying the DB", async () => {
     const res = await request(app)
-      .post("/api/auth/login")
+      .post("/api/v1/auth/login")
       .send({ email: "only-email@example.com" });
 
     expect(res.status).toBe(400);
@@ -45,7 +45,7 @@ describe("POST /api/auth/login", () => {
     User.findOne.mockResolvedValue(null);
 
     const res = await request(app)
-      .post("/api/auth/login")
+      .post("/api/v1/auth/login")
       .send({ email: "nobody@example.com", password: "whatever" });
 
     expect(res.status).toBe(400);
@@ -62,7 +62,7 @@ describe("POST /api/auth/login", () => {
     bcrypt.compare.mockResolvedValue(false);
 
     const res = await request(app)
-      .post("/api/auth/login")
+      .post("/api/v1/auth/login")
       .send({ email: "real@example.com", password: "wrong-password" });
 
     expect(res.status).toBe(400);
@@ -79,7 +79,7 @@ describe("POST /api/auth/login", () => {
     bcrypt.compare.mockResolvedValue(true);
 
     const res = await request(app)
-      .post("/api/auth/login")
+      .post("/api/v1/auth/login")
       .send({ email: "real@example.com", password: "correct-password" });
 
     expect(res.status).toBe(200);
