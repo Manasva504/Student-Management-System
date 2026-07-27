@@ -13,6 +13,7 @@ const { OTP_EXPIRY_MS, MESSAGES } = require("../utils/constants");
 const { hasRequiredFields, isValidEmail, isValidPassword } = require("../utils/validators");
 const logger = require("../utils/logger");
 const authLimiter = require("../middleware/rateLimiter");
+const blockForDemoAccount = require("../middleware/demoGuard");
 const { blacklistToken } = require("../utils/cache");
 
 router.post("/login", authLimiter, async (req, res) => {
@@ -220,7 +221,7 @@ router.get("/profile", authMiddleware, async (req, res) => {
   }
 });
 
-router.put("/profile", authMiddleware, async (req, res) => {
+router.put("/profile", authMiddleware, blockForDemoAccount, async (req, res) => {
   try {
     const { name, email, profilePic } = req.body;
 
@@ -248,7 +249,7 @@ router.put("/profile", authMiddleware, async (req, res) => {
   }
 });
 
-router.put("/change-password", authMiddleware, async (req, res) => {
+router.put("/change-password", authMiddleware, blockForDemoAccount, async (req, res) => {
   try {
     const { oldPassword, newPassword } = req.body;
 
@@ -295,7 +296,7 @@ router.put("/change-password", authMiddleware, async (req, res) => {
   }
 });
 
-router.delete("/delete-account", authMiddleware, async (req, res) => {
+router.delete("/delete-account", authMiddleware, blockForDemoAccount, async (req, res) => {
   try {
     await User.findByIdAndDelete(req.user.id);
 

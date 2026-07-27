@@ -23,6 +23,7 @@ import Profile from "./pages/Profile";
 import ChangePassword from "./pages/ChangePassword";
 import ActivityHistory from "./pages/ActivityHistory";
 import ProtectedRoute from "./components/ProtectedRoute";
+import ServerWakingBanner from "./components/ServerWakingBanner";
 
 function AppContent() {
   const location = useLocation();
@@ -31,6 +32,8 @@ function AppContent() {
 
   return (
     <>
+      <ServerWakingBanner />
+
       {!hideNavbar && <Navbar />}
 
       <Routes>

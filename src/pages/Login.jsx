@@ -7,6 +7,12 @@ import toast from "react-hot-toast";
 import LampToggle from "../components/LampToggle";
 import "../App.css";
 
+// Deliberately public — this account exists so a visitor with no
+// credentials can get into the hosted demo. Must stay in sync with
+// student-management-backend/utils/demoAccount.js, which seeds it.
+const DEMO_EMAIL = "demo@example.com";
+const DEMO_PASSWORD = "DemoPass123";
+
 function Login() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -24,12 +30,13 @@ function Login() {
     setSwingKey((prev) => prev + 1);
   }
 
-  async function handleLogin(e) {
-    e.preventDefault();
+  async function submitCredentials(loginEmail, loginPassword) {
     setLoading(true);
 
     try {
-      await dispatch(loginThunk({ email, password })).unwrap();
+      await dispatch(
+        loginThunk({ email: loginEmail, password: loginPassword }),
+      ).unwrap();
 
       toast.success("Login Successful");
 
@@ -44,6 +51,19 @@ function Login() {
     } finally {
       setLoading(false);
     }
+  }
+
+  async function handleLogin(e) {
+    e.preventDefault();
+    await submitCredentials(email, password);
+  }
+
+  // Fills both fields (so the visitor can see what's being used) and signs
+  // straight in, rather than making them copy two values by hand.
+  async function handleDemoLogin() {
+    setEmail(DEMO_EMAIL);
+    setPassword(DEMO_PASSWORD);
+    await submitCredentials(DEMO_EMAIL, DEMO_PASSWORD);
   }
 
   return (
@@ -68,6 +88,25 @@ function Login() {
           >
             <h2>Welcome Back</h2>
             <p className="auth-subtitle">Sign in to manage your students</p>
+
+            <div className="demo-account-box">
+              <p className="demo-account-title">Demo account</p>
+              <p className="demo-account-creds">
+                <code>{DEMO_EMAIL}</code> · <code>{DEMO_PASSWORD}</code>
+              </p>
+              <button
+                type="button"
+                className="demo-account-btn"
+                onClick={handleDemoLogin}
+                disabled={loading}
+              >
+                Sign in as demo user
+              </button>
+              <p className="demo-account-note">
+                Read-only access — student records can't be added, edited, or
+                deleted.
+              </p>
+            </div>
 
             <div className="auth-input-group">
               <span className="auth-input-icon">

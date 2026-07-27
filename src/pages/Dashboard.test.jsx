@@ -58,8 +58,8 @@ describe("Dashboard", () => {
     renderWithProviders(<Dashboard />, { preloadedState: adminPreloadedState });
 
     expect(
-      await screen.findByText(/Could not load stats/i),
+      await screen.findByText(/Could not load dashboard data/i),
     ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /retry/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /try again/i })).toBeInTheDocument();
   });
 });

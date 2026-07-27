@@ -4,8 +4,15 @@
 const { server, logDailySummary } = require("./app");
 const connectDB = require("./config/db");
 const cron = require("node-cron");
+const { seedDemoUser } = require("./utils/demoAccount");
 require("./listeners/authListeners");
-connectDB();
+
+// Seed after the connection resolves, not alongside it — seedDemoUser()
+// issues a query immediately and would otherwise race the connection.
+// Runs on every boot because it's idempotent (existing demo user is left
+// untouched); that's deliberate, since Render's free tier gives no shell
+// access to run a one-off seed script against the live database.
+connectDB().then(() => seedDemoUser());
 
 // Runs once a day at midnight server time.
 cron.schedule("0 0 * * *", () => {

@@ -1,264 +1,442 @@
-# Student Management System (MERN Stack)
-A full-stack Student Management System built with React, Node.js, Express, and MongoDB. The application enables administrators to securely manage student records through authentication, CRUD operations, dashboard analytics, and email notifications. It also includes Docker support and automated testing using Jest and Supertest.
+# Student Management System
 
-## Table of Contents
+A full-stack web application for managing student records, built during an internship at Adnate IT Solutions. Administrators can create, search, filter, and export student data; view dashboard analytics; and track administrative actions through an audit log. Authentication is JWT-based with two roles (Admin and Student), and the backend uses Redis for response caching and logout token invalidation.
 
-- Features
-- Tech Stack
-- Installation
-- Docker Setup
-- Environment Variables
-- Design Patterns Used
-- Security & Logging
-- Redis / Caching
-- Performance: Redis Caching
-- Cloudinary Setup
-- Screenshots
-- License
+The project is split into a React frontend at the repository root and an Express/MongoDB backend under `student-management-backend/`.
 
+---
+
+## Live demo
+
+**https://student-management-system-ivory-phi.vercel.app**
+
+Backend API: https://student-management-system-zk2b.onrender.com
+
+### Demo account
+
+No signup needed — the login screen has a **"Sign in as demo user"** button, or enter these directly:
+
+| Email | Password |
+|---|---|
+| `demo@example.com` | `DemoPass123` |
+
+The demo account uses the `Student` role, so it can browse students and dashboard analytics but cannot create, edit, delete, or export records — those routes are Admin-only. It also can't change its own password, email, or delete itself, since that would break the demo for the next visitor. Register your own account to see the Admin side.
+
+### First load may be slow
+
+The backend is on Render's free tier and sleeps after inactivity. The first request can take 30–60 seconds while it wakes. The app detects this and retries automatically with backoff, showing a "Waking the server" banner rather than an error.
+
+> **Note:** the previously circulated URL `student-management-system-drab-eta.vercel.app` returns `404` and is not a valid deployment. Use the link above.
+
+---
+
+## Screenshots
+
+<!-- TODO: add screenshots.
+     Suggested: login screen, student list with filters, dashboard analytics,
+     add/edit student form, activity history.
+     Place image files under docs/screenshots/ and link them here. -->
+
+_Screenshots not yet added._
+
+---
+
+## Tech stack
+
+Only packages actually present in `package.json` / `student-management-backend/package.json` are listed.
+
+### Frontend
+| Package | Purpose |
+|---|---|
+| React 19 | UI |
+| Vite 8 | Build tool / dev server |
+| Redux Toolkit + React Redux | State management |
+| React Router 7 | Routing |
+| Axios | HTTP client |
+| Socket.IO Client | Real-time updates |
+| Recharts | Dashboard charts |
+| Framer Motion | Animation |
+| Lucide React | Icons |
+| React Hot Toast, SweetAlert2 | Notifications / confirm dialogs |
+
+### Backend
+| Package | Purpose |
+|---|---|
+| Express 4 | HTTP server |
+| Mongoose 9 | MongoDB ODM |
+| redis (node-redis v4) | Caching + JWT blacklist |
+| Socket.IO | Real-time server |
+| jsonwebtoken, bcryptjs | Auth and password hashing |
+| Helmet, express-mongo-sanitize, express-rate-limit | Security middleware |
+| Multer + multer-storage-cloudinary, cloudinary | Image upload and storage |
+| xlsx, pdfkit | Excel and PDF export |
+| Resend, Nodemailer | Transactional email |
+| Winston, Morgan | Logging |
+| node-cron | Scheduled daily summary job |
+
+### Infrastructure
+- Docker + Docker Compose (MongoDB, Redis, backend, frontend)
+- nginx (serves the built frontend inside its container)
+- Vercel (frontend hosting), Render (backend hosting)
+
+### Testing
+- Backend: Jest, Supertest, mongodb-memory-server
+- Frontend: Vitest, React Testing Library, jsdom, `@vitest/coverage-v8`
+
+---
 
 ## Features
 
-- User authentication using JWT
-- Student CRUD operations
-- Dashboard for student management
-- Email notifications using Resend
-- MongoDB database integration
-- Redis caching for list/dashboard endpoints and JWT logout blacklist
-- Docker support
-- Unit and integration testing with Jest and Supertest
+### Student management
+- Full CRUD via `/api/v1/students`
+- Case-insensitive search across name, email, and `_id`
+- Filter by branch (`course`) and CGPA range (`minCgpa` / `maxCgpa`)
+- Sort by name, CGPA, or course; offset pagination via `page` / `limit`
+- Export the current filtered result set as Excel, CSV, or PDF
+- Per-student notification email, triggered manually by an admin
 
-## Tech Stack
+### Authentication and authorization
+- JWT auth (`utils/tokenFactory.js`), 1-day expiry, payload `{ id, email, role }`
+- Two roles — `Admin` and `Student` — enforced by `middleware/rolemiddleware.js`; all student writes, exports, and admin routes are Admin-only
+- Registration always creates a `Student`; promotion to `Admin` is a manual database change
+- Forgot-password flow: 6-digit OTP emailed to the user, 5-minute expiry, re-verified server-side on the actual reset (not just at the verify step)
+- Email format and minimum 8-character password enforced on register, reset, and change-password
 
-### Frontend
-- React
-- Vite
+### Caching and sessions (Redis)
+- Cache-aside caching on `GET /students` (keyed by the full query string) and all three dashboard endpoints (fixed keys), 60-second TTL from `CACHE_TTL_SECONDS`
+- Cache invalidation on every student create/update/delete, clearing `students:*` via non-blocking `SCAN` plus the three `dashboard:*` keys
+- Logout writes the JWT to a Redis blacklist with a TTL equal to the token's own remaining lifetime; `authMiddleware` rejects blacklisted tokens with `401`
+- Every Redis call degrades gracefully — on an outage the app falls back to querying MongoDB directly and treats tokens as not blacklisted, logging a warning rather than failing the request
 
-### Backend
-- Node.js
-- Express.js
+### Real-time (Socket.IO)
+- JWT-authenticated socket handshake; anonymous connections are rejected
+- Live online-user count (`presence:count`), de-duplicated per user so multiple tabs count once
+- Admin-only activity feed (`activity:new`) covering student add/edit/delete and user online/offline events
+- Client-side toasts on `student:added` / `student:updated` / `student:deleted`
 
-### Database
-- MongoDB
-- Redis (caching + JWT logout blacklist)
+### Dashboard analytics
+- `GET /dashboard/stats` — total students, per-branch counts, average CGPA, highest-CGPA student
+- `GET /dashboard/branch-chart` — MongoDB aggregation pipeline (`$group` / `$project` / `$sort`) producing per-branch student counts and average CGPA
+- `GET /dashboard/registration-trend` — aggregation pipeline bucketing registrations by month via `$dateToString`
 
-### Testing
-- Jest
-- Supertest
+### Auditing and logging
+- `AuditLog` model records `{ user, action }` with timestamps for logins, student create/edit/delete, password changes, and logout
+- Login audit entries are written by an event listener (`events/authEvents.js` → `listeners/authListeners.js`) rather than inline in the route
+- Admin-only `GET /auth/activity-logs` returns the 200 most recent entries
+- Winston logging to console plus `logs/app.log`, with a separate `logs/error.log`; Morgan request logs are piped through the same Winston instance
+- `node-cron` job logs a daily student-count summary at midnight; also exposed on demand at `POST /admin/daily-summary`
 
-### Containerization
-- Docker
-- Docker Compose
+### Image handling
+- Profile pictures upload to Cloudinary under a `student-profiles` folder (local disk storage was removed — Render's filesystem is ephemeral)
+- Uploads restricted to JPEG/PNG/WebP with a 5 MB limit; rejections return a clean `400`
+- Old Cloudinary assets are deleted when a photo is replaced or a student is removed, so images don't orphan
+- Images render through `q_auto,f_auto,w_200,h_200,c_fill` URL transformations for automatic format/quality selection and consistent thumbnail sizing
 
+---
 
-## Installation
+## Architecture
 
-### Backend
+### Layering
 
-```bash
-cd student-management-backend
-npm install
+The backend is organized in layers, though the layering is applied **unevenly** — this is worth stating plainly:
+
+- **`User` domain** — fully layered: routes → `services/userService.js` → `repositories/userRepository.js` → Mongoose model. `BaseService` and `BaseRepository` provide generic CRUD; both receive their dependency (repository / model) via constructor injection.
+- **`Student` domain** — **not** layered. Route handlers in `routes/studentRoutes.js` call Mongoose directly. There is no `StudentRepository` or `StudentService`.
+
+There is no `controllers/` directory; handler logic lives inside the route files. Calling this a strict MVC implementation would overstate it — it is layered where the login/auth refactor reached, and route-centric elsewhere.
+
+`app.js` builds and exports the Express app, HTTP server, and Socket.IO instance but performs **no startup side effects** — no DB connection, no port binding, no cron scheduling. `server.js` is the only file that starts anything. That split is what allows Supertest to import the app cleanly in tests.
+
+### Design patterns
+
+| Pattern | Location | What it does |
+|---|---|---|
+| Singleton | `config/db.js` | An `isConnected` flag makes `connectDB()` a no-op after the first call, guaranteeing one shared MongoDB connection |
+| Factory | `utils/tokenFactory.js` | `createAuthToken(user)` centralizes JWT payload shape, secret, and expiry in one place |
+| Strategy | `utils/notificationStrategies.js` | `getNotificationStrategy(type)` selects a notification sender at runtime; adding SMS is a one-line change |
+| Observer | `events/authEvents.js` + `listeners/authListeners.js` | Login emits `userLoggedIn`; a listener writes the audit log, decoupling the event from its consequences |
+| Adapter | `utils/sendEmail.js` (Resend), `utils/sendNotificationEmail.js` (Nodemailer) | Two different email providers behind one identical `(to, subject, text)` interface |
+| Dependency Injection | `repositories/BaseRepository.js`, `services/BaseService.js` | Model and repository are constructor-injected rather than hardcoded, so they can be swapped for testing |
+
+Route modules also use injection where they need something built in `app.js`: `studentRoutes(io)` and `adminRoutes(logDailySummary)` are factory functions that receive their dependency at mount time.
+
+SOLID shows up most clearly as Single Responsibility (the layer split above) and Open/Closed (the Strategy registry, and extending `BaseRepository`/`BaseService` rather than modifying them).
+
+### Directory structure
+
+```
+student-management-system/
+├── src/                              # React frontend
+│   ├── components/                   # ActivityFeed, Navbar, StudentCard, ProtectedRoute, LampToggle
+│   ├── context/SocketContext.jsx     # Socket.IO connection + presence
+│   ├── pages/                        # Login, Register, Dashboard, StudentList, AddStudent,
+│   │                                 #   EditStudent, StudentDetails, Profile, ForgotPassword,
+│   │                                 #   VerifyOtp, ResetPassword, ChangePassword,
+│   │                                 #   ManageBranches, ActivityHistory
+│   ├── redux/                        # store, authSlice, studentSlice, dashboardSlice
+│   ├── services/                     # authServices.js, studentService.js (API layer)
+│   ├── test-utils/                   # renderWithProviders.jsx
+│   └── utils/                        # cloudinaryImage.js, confirm.js
+│
+├── student-management-backend/
+│   ├── app.js                        # Express app + Socket.IO (no side effects)
+│   ├── server.js                     # Entry point: DB connect, cron, listen
+│   ├── config/db.js                  # Singleton connection
+│   ├── routes/                       # authRoutes, studentRoutes, dashboardRoutes,
+│   │                                 #   uploadRoutes, adminRoutes
+│   ├── services/                     # BaseService, userService
+│   ├── repositories/                 # BaseRepository, userRepository
+│   ├── models/                       # User, Student, Auditlog
+│   ├── middleware/                   # authMiddleware, rolemiddleware, rateLimiter, errorHandler
+│   ├── events/ + listeners/          # Observer pattern for login auditing
+│   ├── utils/                        # cache, redisClient, cloudinary, logger, tokenFactory,
+│   │                                 #   notificationStrategies, validators, constants, ...
+│   ├── scripts/                      # benchmark.js, seedBenchmarkData.js
+│   └── tests/                        # unit/ and integration/
+│
+├── docker-compose.yml                # mongo, redis, backend, frontend
+├── Dockerfile                        # Frontend build → nginx
+└── vercel.json                       # SPA rewrite rule
 ```
 
-### Frontend
+---
 
-```bash
-npm install
-npm run dev
-```
+## API
 
+All API routes are versioned under `/api/v1`. `GET /` is deliberately left unversioned as a health check (`Backend Running`) — health checks aren't part of the API contract.
 
-## Docker Setup
+**There is no Swagger/OpenAPI documentation in this repository.** The table below is the reference; adding OpenAPI is listed under [Roadmap](#limitations-and-roadmap).
+
+| Group | Base path | Endpoints | Auth |
+|---|---|---|---|
+| Auth | `/api/v1/auth` | `POST /register`, `POST /login`, `POST /forgot-password`, `POST /verify-otp`, `POST /reset-password` | Public (rate-limited) |
+| Account | `/api/v1/auth` | `GET /profile`, `PUT /profile`, `PUT /change-password`, `POST /logout`, `DELETE /delete-account` | JWT |
+| Audit | `/api/v1/auth` | `GET /activity-logs` | JWT + Admin |
+| Students | `/api/v1/students` | `GET /`, `GET /:id` | JWT |
+| Students | `/api/v1/students` | `POST /`, `PUT /:id`, `DELETE /:id`, `POST /:id/notify` | JWT + Admin |
+| Exports | `/api/v1/students` | `GET /export/excel`, `GET /export/csv`, `GET /export/pdf` | JWT + Admin |
+| Dashboard | `/api/v1/dashboard` | `GET /stats`, `GET /branch-chart`, `GET /registration-trend` | JWT |
+| Upload | `/api/v1/upload` | `POST /` | JWT |
+| Admin | `/api/v1/admin` | `POST /daily-summary` | JWT + Admin |
+| Health | — | `GET /` (plain text), `GET /api/v1/health` (JSON) | Public |
+
+`GET /api/v1/health` returns `{ status, uptime, timestamp }` and touches neither MongoDB nor Redis, so it stays cheap enough to poll on a schedule. Pointing an external pinger at it every 10 minutes keeps the Render free instance from idling into a cold start.
+
+`GET /api/v1/students` accepts `search`, `branch`, `minCgpa`, `maxCgpa`, `sortBy` (`name` \| `cgpa` \| `course`), `page`, and `limit`. The export endpoints accept the same filters and ignore pagination.
+
+Authenticate by sending `Authorization: Bearer <token>`.
+
+---
+
+## Getting started
 
 ### Prerequisites
-- Docker Desktop installed and running
+- Node.js 20+ (Docker images use `node:20-alpine`)
+- Docker Desktop, for MongoDB and Redis
+- A Cloudinary account (free tier) — the backend **exits at startup** if Cloudinary variables are missing outside test mode
+- A Resend API key, for password-reset emails
 
-### Environment Variables
-
-Inside `student-management-backend`, copy the example file:
+### 1. Clone and configure
 
 ```bash
-cp .env.example .env
+git clone https://github.com/Manasva504/Student-Management-System.git
+cd Student-Management-System
+cp student-management-backend/.env.example student-management-backend/.env
 ```
 
+On Windows PowerShell:
+```powershell
+Copy-Item student-management-backend\.env.example student-management-backend\.env
+```
 
-Update the values in `.env` with your own credentials.
-
-Required variables:
+Fill in `student-management-backend/.env`:
 
 ```env
-MONGO_URI=your_mongodb_connection_string
-JWT_SECRET=your_jwt_secret
+MONGO_URI=mongodb://mongo:27017/studentmanagement
+JWT_SECRET=<a long random string>
 PORT=5000
-RESEND_API_KEY=your_resend_api_key
+RESEND_API_KEY=<your resend api key>
+REDIS_HOST=redis
+REDIS_PORT=6379
+CLOUDINARY_CLOUD_NAME=<your cloudinary cloud name>
+CLOUDINARY_API_KEY=<your cloudinary api key>
+CLOUDINARY_API_SECRET=<your cloudinary api secret>
 ```
 
-On Windows (PowerShell):
+Cloudinary credentials come from your Cloudinary dashboard under "Product Environment Credentials".
 
-```powershell
-Copy-Item .env.example .env
-```
+> The `MONGO_URI` and `REDIS_HOST` values above use Docker service names (`mongo`, `redis`) and only resolve **inside** the Compose network. If you run the backend directly on your host instead, use `mongodb://localhost:27017/studentmanagement` and `REDIS_HOST=localhost`.
 
-### Running with Docker Compose (recommended)
-From the project root:
+### 2. Run everything with Docker Compose
+
 ```bash
-docker compose up
+docker compose up --build
 ```
 
-This builds and starts three containers:
-- `mongo` — official MongoDB image, exposed on port 27017
-- `backend` — Node/Express API, exposed on port 5000
-- `frontend` — React app, built and served via nginx on port 8081
+This starts four containers:
 
-Once running, open `http://localhost:8081` in your browser.
+| Service | Port | Notes |
+|---|---|---|
+| `frontend` | 8081 | Built with Vite, served by nginx |
+| `backend` | 5000 | Express API |
+| `mongo` | 27017 | Persisted to the `mongo-data` volume |
+| `redis` | 6379 | Persisted to `redis-data`, RDB snapshot every 60s |
 
-To stop:
+Open **http://localhost:8081**.
 
+The frontend image is built with `VITE_API_BASE_URL=http://localhost:5000` (a Docker build argument), because the browser reaches the backend through the published host port, not the Compose service name.
+
+Stop with:
 ```bash
 docker compose down
 ```
 
-### Running Services Individually
+### 3. Or run the services individually
 
-**Backend**
+Start only the databases:
+```bash
+docker compose up mongo redis
+```
 
+Backend (from `student-management-backend/`, with `MONGO_URI` and `REDIS_HOST` pointed at `localhost`):
 ```bash
 cd student-management-backend
-
-docker build -t student-backend .
-docker run -p 5000:5000 --env-file .env student-backend
+npm install
+npm start          # node server.js — http://localhost:5000
 ```
 
-**Frontend**
+Frontend (from the repository root, in a second terminal):
+```bash
+npm install
+npm run dev        # Vite dev server — http://localhost:5173
+```
+
+Both `http://localhost:5173` and `http://localhost:8081` are in the backend's CORS allowlist.
+
+### 4. Create an admin account
+
+A demo user (`demo@example.com` / `DemoPass123`, `Student` role) is seeded automatically on every backend start — the seed is idempotent and leaves an existing demo user untouched.
+
+Registration always creates a `Student`. To grant yourself Admin, update the user directly in MongoDB:
 
 ```bash
-
-docker build -t student-frontend .
-docker run -p 8081:80 student-frontend
+docker exec -it mongo mongosh studentmanagement
+```
+```javascript
+db.users.updateOne({ email: "you@example.com" }, { $set: { role: "Admin" } })
 ```
 
+Log out and back in afterwards — the role is embedded in the JWT, so an existing token keeps the old role.
 
-## Design Patterns Used
+### Available scripts
 
-### Singleton — config/db.js
-An isConnected flag guards connectDB() against opening a second MongoDB connection if called more than once. Guarantees exactly one shared connection for the app's lifetime.
+**Root (frontend)**
+| Command | Description |
+|---|---|
+| `npm run dev` | Vite dev server |
+| `npm run build` | Production build |
+| `npm run preview` | Preview the production build |
+| `npm run lint` | ESLint |
+| `npm test` | Vitest (single run) |
+| `npm run test:coverage` | Vitest with V8 coverage |
 
-### Factory — utils/tokenFactory.js
-createAuthToken(user) centralizes JWT creation in one place. Any part of the app needing a token calls this function instead of duplicating jwt.sign(...) details (secret, algorithm, payload shape).
+**`student-management-backend/`**
+| Command | Description |
+|---|---|
+| `npm start` | Start the API server |
+| `npm test` | Jest |
+| `npm run test:coverage` | Jest with coverage |
 
-### Strategy — utils/notificationStrategies.js
-getNotificationStrategy(type) picks which notification implementation to use at runtime. Callers (e.g. forgot-password) always call the same interface regardless of which concrete sender they get back.
+---
 
-### Observer — events/authEvents.js + listeners/authListeners.js
-Login emits a "userLoggedIn" event instead of directly writing an audit log. A separate listener reacts to it. Decouples "what happened" from "what should happen as a result," so new reactions can be added without touching the login route.
+## Testing
 
-### Adapter — utils/sendEmail.js (Resend) and utils/sendNotificationEmail.js (Nodemailer/Gmail)
-Two different email providers, each wrapped behind the identical (to, subject, text) interface. Callers never know or care which provider is underneath — this uniformity is what made Strategy Pattern possible on top of them.
+```bash
+# Backend — 42 tests across 5 files
+cd student-management-backend
+npm test
 
-### Dependency Injection — repositories/BaseRepository.js + services/BaseService.js
-Generic CRUD/business-logic classes that receive their Model/Repository via constructor injection rather than hardcoding it. UserRepository/UserService extend these bases, so common logic is written once and reused, and dependencies can be swapped (e.g., for testing) without changing the base classes.
+# Frontend — 8 tests across 4 files
+npm test
+```
 
-### DRY / Clean Code — utils/responseHandler.js, utils/constants.js, utils/validators.js
-Extracted repeated response-shaping, hardcoded strings, and field-validation logic out of authRoutes.js into shared modules, removing duplication across routes.
+**Backend (Jest + Supertest + mongodb-memory-server).** Unit tests mock the Mongoose models, Cloudinary, and the email sender to exercise handler logic — validation branches, status codes, response shapes, and the `adminOnly` block — while leaving JWT signing/verification real. Integration tests run the same flows against a real in-memory MongoDB through `request(app)` and assert on actual database state, including that a rejected write leaves the collection unchanged. `jest.config.js` sets a 20-second timeout, since the in-memory MongoDB binary can be slow to start on a cold run.
 
-## Security & Logging
+`tests/integration/demoAccount.integration.test.js` additionally covers the hosted-demo behaviour: that the demo seed is idempotent (a re-run leaves a drifted account untouched rather than resetting it), that the demo account can read but cannot change its own password, email, or delete itself, that a non-demo user is unaffected by that guard, and that `/api/v1/health` answers unauthenticated.
 
-The backend went through an OWASP-basics hardening pass covering HTTP headers, injection protection, brute-force protection, input validation, error-handling hygiene, and centralized logging.
+**Frontend (Vitest + React Testing Library).** Component tests render pages with the real Redux store and reducers via `renderWithProviders`, mocking only the service-layer network calls.
 
-### HTTP security headers — Helmet
-`helmet()` is the very first middleware registered in `app.js`, before CORS. It has to run first: `corsOriginCheck`'s rejection path calls `next(err)`, which skips every subsequent non-error middleware and jumps straight to the error handler — so if Helmet ran after CORS, a CORS-rejected response would go out with no security headers at all. Running it first guarantees every response gets them, rejected or not.
+Two known caveats, stated rather than hidden:
 
-### NoSQL injection protection — express-mongo-sanitize
-`mongoSanitize()` strips any request key starting with `$` or containing a `.` from `req.body`/`req.query`/`req.params` before it reaches Mongoose, closing the classic `{ "$gt": "" }` operator-injection hole in login/search fields.
+- **Redis is bypassed under `NODE_ENV=test`.** Every function in `utils/cache.js` short-circuits in test mode, and `redisClient.js` never calls `connect()`. This keeps tests independent of a running Redis and prevents cross-test cache pollution — but it also means **real cache hits and real blacklist rejections are not covered by automated tests**.
+- **On Windows, running the full suite in parallel can fail intermittently.** `mongodb-memory-server` spawns a real `mongod` per Jest worker, and under CPU contention those can exceed the startup timeout. If integration tests fail with `Instance failed to start`, re-run, or use `npx jest --runInBand`.
 
-### Brute-force protection — express-rate-limit
-`middleware/rateLimiter.js` defines `authLimiter`: 10 requests per IP per 15-minute window, applied to the five auth routes someone could actually brute-force — `POST /login`, `/register`, `/forgot-password`, `/verify-otp`, `/reset-password`. Exceeding the limit returns `429` and logs a Winston warning (`ip`, `path`). It's skipped entirely when `NODE_ENV === "test"` so the Jest suite's repeated login/register calls aren't throttled.
+---
 
-**`trust proxy`:** `app.set("trust proxy", 1)` is set right after `const app = express()`. Render sits in front of this app as a single reverse-proxy hop — without `trust proxy`, `express-rate-limit`'s default `keyGenerator` reads `req.ip` off the raw socket, which resolves to Render's proxy IP for *every* request, collapsing all real users into one shared rate-limit bucket. The value is the literal `1` (trust exactly one hop), not `true` (which would trust an unbounded chain and accept a spoofed `X-Forwarded-For` header from anywhere).
+## Performance
 
-### Request/error logging — Morgan + Winston
-Morgan logs every request (`combined` format: method, URL, status, response time, remote addr, user-agent) piped through the shared Winston logger (`utils/logger.js`) instead of straight to console, so it lands in the same place — console + `logs/app.log` — as every other log line. Winston also has a dedicated `logs/error.log` transport (level: `error`), and every remaining `catch` block across `app.js`/`authRoutes.js` (student CRUD, auth flows, exports, uploads) logs through `logger.error(...)` rather than raw `console.log`/`console.error`, so error visibility is consistent and queryable in one place instead of scattered across stdout.
+The repository includes benchmarking scripts, so these numbers are reproducible rather than claimed.
 
-### Error-handling hygiene
-`middleware/errorHandler.js` and the `/login` route both log the real error (`err.stack`/`err.message`) via Winston, but gate what reaches the *client* on `NODE_ENV`: outside production the real message is returned (useful while developing), but in production a generic `"Server Error"` goes out instead. This prevents raw Mongoose/Mongo error internals — field names, query structure, cast-type details — from being usable as a probing surface by an attacker hitting malformed input against the live API. Routes that already return controlled, safe messages (e.g. `"Invalid Credentials"`, `"Invalid or expired OTP"`) are unaffected — the gate only kicks in for errors without an explicit, intentional status code, i.e. genuinely unexpected failures.
+Measured locally against 500 seeded students, 50 requests per phase, with both the backend and Redis on the same machine:
 
-### Input validation
-- **Student `:id` routes** (`GET/PUT/DELETE /students/:id`, `POST /students/:id/notify`) validate `req.params.id` with `mongoose.Types.ObjectId.isValid(...)` before it reaches Mongoose, returning a clean `400 "Invalid student ID"` instead of letting a malformed id throw an unhandled `CastError` that falls through to a generic `500`.
-- **Email format** (`utils/validators.js`'s `isValidEmail`) and a **minimum 8-character password** (`isValidPassword`) are enforced on `POST /register`, `POST /reset-password`, `PUT /change-password` (new password), and `PUT /profile` (email field) — a simple regex check, not a full RFC 5322 validator, deliberately: good enough to reject obviously-malformed input without the false-negative headaches a fully spec-compliant email regex brings.
-- **File uploads** (`POST /upload`) are restricted via `multer`'s `fileFilter` to `image/jpeg`, `image/png`, and `image/webp` only, with a `5MB` size limit (`limits.fileSize`). Rejections come back as a clean `400` with the specific reason instead of an unhandled multer crash or a silently-empty `req.file`.
-
-### Known accepted risk — xlsx CVEs
-`xlsx` (used by `GET /students/export/excel`) has two unpatched high-severity CVEs — [GHSA-4r6h-8v6p-xvw6](https://github.com/advisories/GHSA-4r6h-8v6p-xvw6) (prototype pollution) and [GHSA-5pgg-2g8v-p4x9](https://github.com/advisories/GHSA-5pgg-2g8v-p4x9) (ReDoS) — neither fixable via `npm audit fix`, since SheetJS never published a patched version to npm for either advisory. This is an **accepted risk, not a gap**: this app only ever calls `xlsx.write()` on server-generated data built from `buildStudentQuery()` results — it never calls `xlsx.read()`/parses attacker-controlled input, which is the vector both CVEs require. A library migration was considered out of scope for this pass since it risks breaking the Excel export feature for a CVE class that isn't reachable here; re-evaluate if this ever starts parsing uploaded spreadsheets.
-
-## Redis / Caching
-
-Redis (`redis:7-alpine` in Docker Compose, the official [`redis`](https://www.npmjs.com/package/redis) npm package / node-redis v4 client) is used for two unrelated things: caching read-heavy Mongo queries, and blacklisting logged-out JWTs. Both are designed so a Redis outage degrades the app rather than breaking it — every cache/blacklist call in `utils/cache.js` catches its own errors, logs a Winston warning, and falls back to the pre-Redis behavior (hit Mongo directly / treat the token as not blacklisted).
-
-### Setup
-- `docker-compose.yml` adds a `redis` service alongside `mongo`, with a named volume (`redis-data`) and `--save 60 1` for basic RDB persistence — nice-to-have for surviving a container restart, not required, since this is a cache, not a system of record.
-- `utils/redisClient.js` exports one configured node-redis `createClient()` instance (`url: redis://${REDIS_HOST}:${REDIS_PORT}`), reading `REDIS_HOST`/`REDIS_PORT` from the environment (`localhost:6379` default for running the backend directly outside Docker; `.env.example` ships `REDIS_HOST=redis`/`REDIS_PORT=6379` to match the Compose service name, the same pattern `MONGO_URI` already uses for `mongo`). Unlike ioredis, node-redis has no `lazyConnect` — `connect()` is called explicitly at module load (skipped under `NODE_ENV=test`, see below), with a top-level `.catch()` that logs a startup failure via Winston instead of crashing the process. `disableOfflineQueue: true` makes a command sent while disconnected reject immediately rather than queue indefinitely, so `utils/cache.js`'s try/catch actually catches a dead Redis fast instead of hanging.
-- `utils/cache.js` wraps the client with `cacheGet`/`cacheSet`/`deleteByPattern`/`invalidateStudentCaches`/`blacklistToken`/`isTokenBlacklisted` — every one of them catches its own errors and logs via Winston rather than throwing, so a dead Redis never crashes a request; it just always misses. Written against node-redis v4's API: `client.set(key, value, { EX: ttlSeconds })` (an options object, not ioredis's positional `("EX", ttl)`), and `client.scanIterator({ MATCH: pattern, COUNT: 100 })` (an async generator yielding one key at a time) instead of ioredis's `scanStream`.
-
-### API response caching (cache-aside)
-- `GET /students` — key is `students:${JSON.stringify(req.query)}` (the full query string, since search/branch/CGPA-range/sort/page/limit all produce different result sets), TTL 60s.
-- `GET /dashboard/stats`, `GET /dashboard/branch-chart`, `GET /dashboard/registration-trend` — fixed keys (`dashboard:stats`, `dashboard:branch-chart`, `dashboard:registration-trend`), no query params to vary on, TTL 60s.
-- TTL lives in one place — `CACHE_TTL_SECONDS` in `utils/constants.js` — rather than a magic `60` scattered across five routes.
-- Cache-aside, not write-through: check Redis first and return on a hit; on a miss, run the real Mongo query, write the result to Redis, then return it. Error responses are never cached — `cacheSet` is only ever called on the success path inside the `try` block, before the response is sent.
-
-### Cache invalidation
-`POST /students`, `PUT /students/:id`, and `DELETE /students/:id` all call `invalidateStudentCaches()` right after their Mongo write succeeds (and after the audit log write, before the response). It does two things:
-1. `deleteByPattern("students:*")` — clears every cached `/students` query variant, using Redis `SCAN` (cursor-paginated, non-blocking) rather than `KEYS` (a single blocking call that walks the whole keyspace and stalls every other client on a busy Redis).
-2. Deletes all three fixed `dashboard:*` keys — adding/editing/deleting a student changes the aggregate stats too, not just the list.
-
-One call at each of the three mutation sites, rather than duplicating the same key-clearing logic three times.
-
-### JWT logout blacklist
-`POST /api/auth/logout` computes how many seconds are left before the token's own `exp` claim (`req.user.exp - Math.floor(Date.now() / 1000)`) and writes `blacklist:<token>` to Redis with that as the TTL — a token blacklisted a minute before it would've expired anyway doesn't sit in Redis for hours; the entry expires exactly when the token would have stopped working regardless. `middleware/authMiddleware.js` checks `isTokenBlacklisted(token)` right after `jwt.verify()` succeeds (checked after, not before, so a malformed/expired/wrongly-signed token never costs a Redis round trip) and returns `401` if it's blacklisted.
-
-The blacklist check **fails open**: if Redis is unreachable, `isTokenBlacklisted` returns `false` (logging a warning) rather than rejecting the request. A brief window where a just-logged-out token still works during a Redis outage is a far smaller problem than every authenticated user in the app being locked out until Redis comes back — the same "degrade, don't crash" principle as the caching layer.
-
-### Test-mode behavior
-Every function in `utils/cache.js` short-circuits to a no-op (or a safe default, e.g. `isTokenBlacklisted` returning `false`) when `NODE_ENV === "test"` — the same pattern the auth rate limiter already uses (`middleware/rateLimiter.js`'s `skip`). This was a deliberate call, not an oversight: the existing Jest suite asserts directly against mocked Mongoose calls with fresh state every test (`jest.clearAllMocks()` in `beforeEach`, no equivalent Redis reset), so a cache hit left over from an earlier test would silently return stale data instead of exercising the route logic under test. Skipping also means running the suite never opens a real Redis connection — `redisClient.js` skips calling `connect()` entirely under `NODE_ENV=test` — **the test suite does not exercise real cache-hit or real blacklist-rejection behavior**; that's covered by the manual benchmark run below and by exploratory testing (login → logout → re-use the same token → confirm `401`), not by an automated test. Flagging this explicitly rather than leaving it implicit.
-
-## Performance: Redis Caching
-
-Measured with `scripts/benchmark.js` against 500 seeded student documents (`scripts/seedBenchmarkData.js`), 50 requests per phase, backend and Redis running locally (not on Render/Vercel, to remove network variance from the numbers):
-
-| Endpoint | Without cache (cold, avg / min / max) | With cache (warm, avg / min / max) | Speedup |
+| Endpoint | Cache cold (avg / min / max) | Cache warm (avg / min / max) | Ratio |
 |---|---|---|---|
-| `GET /students?page=1&limit=20` | 11.0ms / 5ms / 146ms | 2.7ms / 1ms / 5ms | ~4.1x |
-| `GET /dashboard/stats` | 15.1ms / 9ms / 27ms | 2.1ms / 1ms / 4ms | ~7.2x |
+| `GET /students?page=1&limit=20` | 11.0 ms / 5 ms / 146 ms | 2.7 ms / 1 ms / 5 ms | ~4.1× |
+| `GET /dashboard/stats` | 15.1 ms / 9 ms / 27 ms | 2.1 ms / 1 ms / 4 ms | ~7.2× |
 
-"Cold" flushes Redis before *every single request* in that phase, so each one is genuinely forced through Mongo rather than measuring a cache that warms itself up after the first hit. "Warm" populates the cache once, then measures 50 requests that should all be served straight from Redis.
+"Cold" flushes Redis before *every* request, forcing each one through MongoDB; "warm" primes the cache once and then measures. These are small-dataset numbers from a single local machine — they demonstrate the caching layer works, not production throughput.
 
-**Why the gap:** the cold path pays for a real Mongo round trip every time — for `/students`, a `countDocuments()` plus a `find().sort().skip().limit()` query over 500 documents; for `/dashboard/stats`, a full collection scan (`Student.find()` with no filter) plus in-process aggregation over all 500 documents on every request. The warm path skips Mongo entirely and returns the exact same JSON body straight from an in-memory Redis `GET` — no query planner, no disk/network I/O to the database, no aggregation work, just a key lookup. The gap would widen further on a larger collection or under concurrent load (the cold path scales with collection size and Mongo's current load; the warm path stays roughly constant), and would also be larger in production, where the backend and MongoDB are on separate hosts (Render + Atlas) rather than both local — this benchmark's cold numbers are a lower bound on the real-world gap, not an upper one.
-
-Reproduce it: `node scripts/seedBenchmarkData.js` (seeds `MONGO_URI`), start the backend, then `BENCH_TOKEN=<a valid JWT> node scripts/benchmark.js`.
-
-## Cloudinary Setup
-
-Student and user profile pictures are stored in [Cloudinary](https://cloudinary.com) rather than on local disk — required because Render's filesystem is ephemeral (anything written to it, including `POST /upload`'s old `./uploads` folder, is wiped on every redeploy).
-
-### Getting credentials
-
-1. Create a free account at [cloudinary.com](https://cloudinary.com/users/register/free).
-2. Once logged in, your **Dashboard** page shows all three values this app needs, under "Product Environment Credentials":
-   - **Cloud Name**
-   - **API Key**
-   - **API Secret** (click "reveal" to see it)
-
-### Environment variables
-
-Add these three to `student-management-backend/.env` (already present, secret-free, in `.env.example`):
-
-```env
-CLOUDINARY_CLOUD_NAME=your_cloud_name
-CLOUDINARY_API_KEY=your_api_key
-CLOUDINARY_API_SECRET=your_api_secret
+Reproduce:
+```bash
+cd student-management-backend
+node scripts/seedBenchmarkData.js                      # seeds 500 students into MONGO_URI
+npm start                                              # in another terminal
+BENCH_TOKEN=<a valid JWT> node scripts/benchmark.js
 ```
 
-The backend fails loudly at startup (logs a clear error and exits) if any of these three are missing outside test mode — better than a confusing 500 on the first upload attempt in production.
+---
 
-### Image delivery convention
+## Security
 
-Every rendered profile picture URL runs through `src/utils/cloudinaryImage.js`'s `getThumbnailUrl()`, which inserts `q_auto,f_auto,w_200,h_200,c_fill` into the Cloudinary URL path (right after `/upload/`) — automatic quality/format selection per requesting browser, cropped to a consistent 200×200 square — instead of ever serving the original, full-size upload for what's always displayed as a small avatar.
+- **Helmet** registered as the first middleware, before CORS — a CORS rejection calls `next(err)` and skips later non-error middleware, so ordering it first ensures rejected responses still carry security headers
+- **NoSQL injection sanitization** via `express-mongo-sanitize`, stripping `$`-prefixed and dotted keys from body, query, and params
+- **Rate limiting** on the five brute-forceable auth routes: 10 requests per IP per 15 minutes, returning `429` and logging a warning; disabled under `NODE_ENV=test`
+- **`trust proxy` set to `1`** (not `true`) so `req.ip` resolves to the real client behind Render's single proxy hop, without honouring a spoofed `X-Forwarded-For` chain
+- **Passwords** hashed with bcrypt (cost 10); minimum length 8
+- **Error responses gated on `NODE_ENV`** — the real error is logged via Winston, but production clients receive a generic `Server Error` instead of Mongoose internals that could be used to probe the schema
+- **ObjectId validation** on every `:id` route before it reaches Mongoose, returning `400` instead of an unhandled `CastError`
+- **Upload restrictions** — MIME allowlist (JPEG/PNG/WebP) and a 5 MB cap
+- **OTP re-verification** on password reset, so the reset endpoint can't be called directly while skipping the verify step
+- **JWT blacklisting** on logout, so a token can be invalidated before its natural expiry
+
+### Known accepted risks
+
+- **`xlsx`** carries two unpatched high-severity advisories ([GHSA-4r6h-8v6p-xvw6](https://github.com/advisories/GHSA-4r6h-8v6p-xvw6), [GHSA-5pgg-2g8v-p4x9](https://github.com/advisories/GHSA-5pgg-2g8v-p4x9)) with no npm-published fix. Both require parsing attacker-controlled spreadsheets; this app only ever calls `xlsx.write()` on server-generated data, never `xlsx.read()`.
+- **`cloudinary@1.x`** has an argument-injection advisory ([GHSA-g4mf-96x5-5m2c](https://github.com/advisories/GHSA-g4mf-96x5-5m2c)) fixed only in 2.7+, a major version `multer-storage-cloudinary` does not support. No user-controlled input reaches a Cloudinary API parameter here — the upload folder is a hardcoded constant and public IDs are Cloudinary-generated.
+
+Both should be revisited if the relevant usage patterns ever change.
+
+---
+
+## Limitations and roadmap
+
+Honest list of what is not done:
+
+- **The hosted demo is out of sync** — the Render backend needs a redeploy from `master` to serve `/api/v1` routes (see [Live demo](#live-demo))
+- **No Swagger/OpenAPI documentation.** The API table above is the only reference
+- **Layering is inconsistent** — only the `User` domain uses the repository/service layers; `Student` CRUD talks to Mongoose directly from route handlers
+- **No admin UI for role management** — promoting a user to Admin requires a manual database update
+- **No refresh tokens** — a single 1-day JWT, with logout handled by blacklisting
+- **No CI pipeline** — no GitHub Actions workflow, so tests are not run automatically on push
+- **Test coverage is partial** — 50 tests total, focused on student CRUD, login, and the demo account; the OTP flow, exports, uploads, dashboard endpoints, and Socket.IO events have no automated coverage
+- **Real cache hits and blacklist rejections are untested**, since Redis is bypassed in test mode
+- **Branch list is stored in `localStorage`**, not in the database, so it doesn't sync across devices or users
+- **Socket.IO presence is in-memory**, so counts reset on restart and would not be shared across multiple backend instances
+- **Pagination is offset-based**, which degrades on large collections compared to cursor pagination
+- **Unused dependencies** remain in `package.json` — `otp-generator`, `recharts`, and `sweetalert2` in the backend; `express` and `multer` at the frontend root
+
+---
+
+## License
+
+No license file is currently present in this repository.

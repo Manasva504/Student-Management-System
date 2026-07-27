@@ -59,20 +59,29 @@ function Dashboard() {
     };
   }, [socket, dispatch]);
 
+  // Only a genuine failure reaches this branch now: the axios interceptor
+  // in services/apiRetry.js already retried a sleeping backend five times
+  // with backoff (and ServerWakingBanner explained the wait while it did),
+  // so arriving here means the server answered with a real error or stayed
+  // unreachable for ~46 seconds.
   if (error) {
     return (
       <div className="dashboard-card">
         <h1>Dashboard Analytics</h1>
         <p>
-          Could not load stats. The server may be starting up — try refreshing
-          in a moment.
+          Could not load dashboard data. The server may still be starting up
+          after a period of inactivity.
         </p>
         <div className="dashboard-buttons">
           <button
-            onClick={() => dispatch(fetchDashboardStats())}
+            onClick={() => {
+              dispatch(fetchDashboardStats());
+              dispatch(fetchBranchChart());
+              dispatch(fetchRegistrationTrend());
+            }}
             className="primary-btn"
           >
-            Retry
+            Try again
           </button>
         </div>
       </div>
@@ -82,7 +91,10 @@ function Dashboard() {
   if (!stats) {
     return (
       <div className="dashboard-card">
-        <h2>Loading...</h2>
+        <div className="dashboard-loading">
+          <span className="auth-spinner" aria-hidden="true" />
+          <h2>Loading dashboard…</h2>
+        </div>
       </div>
     );
   }

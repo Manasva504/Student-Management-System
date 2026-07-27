@@ -185,6 +185,20 @@ app.get("/", (req, res) => {
   res.send("Backend Running");
 });
 
+// Machine-readable liveness check, deliberately unauthenticated and
+// uncached so an external pinger (cron-job.org, UptimeRobot) can hit it on
+// a schedule to keep Render's free instance from idling into a 30-60s cold
+// start. Kept cheap on purpose — no database or Redis round trip, so it
+// answers even while those are still connecting, and a ping can never add
+// load to Mongo.
+app.get("/api/v1/health", (req, res) => {
+  res.json({
+    status: "ok",
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+  });
+});
+
 // ── Scheduled Job ────────────────────────────────────────────
 // Counts total students and logs a one-line summary. Used by both
 // server.js's cron.schedule callback and the POST /api/v1/admin/daily-summary

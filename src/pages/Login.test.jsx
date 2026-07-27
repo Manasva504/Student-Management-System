@@ -63,7 +63,7 @@ describe("Login", () => {
 
     await user.type(await screen.findByLabelText("Email"), "admin@example.com");
     await user.type(screen.getByLabelText("Password"), "correct-password");
-    await user.click(screen.getByRole("button", { name: /sign in/i }));
+    await user.click(screen.getByRole("button", { name: "Sign In" }));
 
     await vi.waitFor(() => {
       expect(toastSuccess).toHaveBeenCalledWith("Login Successful");
@@ -87,7 +87,7 @@ describe("Login", () => {
 
     await user.type(await screen.findByLabelText("Email"), "wrong@example.com");
     await user.type(screen.getByLabelText("Password"), "wrong-password");
-    await user.click(screen.getByRole("button", { name: /sign in/i }));
+    await user.click(screen.getByRole("button", { name: "Sign In" }));
 
     await vi.waitFor(() => {
       expect(toastError).toHaveBeenCalledWith("Invalid Credentials");

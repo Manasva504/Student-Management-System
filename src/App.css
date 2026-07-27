@@ -1523,3 +1523,108 @@ button:disabled {
     height: 460px;
   }
 }
+
+/* ── Demo account box (Login) ──────────────────────────────── */
+.demo-account-box {
+  margin: 0 0 20px;
+  padding: 14px 16px;
+  border: 1px dashed rgba(99, 102, 241, 0.45);
+  border-radius: 12px;
+  background: rgba(99, 102, 241, 0.06);
+  text-align: center;
+}
+
+.demo-account-title {
+  margin: 0 0 6px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #4f46e5;
+}
+
+.demo-account-creds {
+  margin: 0 0 10px;
+  font-size: 0.85rem;
+  color: var(--text-muted, #555);
+  word-break: break-word;
+}
+
+.demo-account-creds code {
+  padding: 2px 6px;
+  border-radius: 5px;
+  background: rgba(99, 102, 241, 0.12);
+  font-size: 0.82rem;
+}
+
+.demo-account-btn {
+  width: 100%;
+  padding: 9px 14px;
+  border: none;
+  border-radius: 9px;
+  background: #6366f1;
+  color: #fff;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.demo-account-btn:hover:not(:disabled) {
+  background: #4f46e5;
+}
+
+.demo-account-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.demo-account-note {
+  margin: 8px 0 0;
+  font-size: 0.75rem;
+  color: var(--text-muted, #666);
+}
+
+/* ── Server waking banner (cold start) ─────────────────────── */
+.server-waking-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 10px 16px;
+  background: #4f46e5;
+  color: #fff;
+  font-size: 0.88rem;
+  text-align: center;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
+}
+
+.server-waking-spinner {
+  width: 15px;
+  height: 15px;
+  border: 2.5px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: auth-spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+/* ── Dashboard loading state ───────────────────────────────── */
+.dashboard-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+/* .auth-spinner is white-on-purple by default (it lives inside the submit
+   button); on a light dashboard card it needs a visible border colour. */
+.dashboard-loading .auth-spinner {
+  border-color: rgba(99, 102, 241, 0.25);
+  border-top-color: #6366f1;
+}
